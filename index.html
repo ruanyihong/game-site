@@ -203,6 +203,113 @@ const TEAM_LOADOUT = {
   usa: ['saber', 'rifle', 'pistol'],
 };
 
+// ===== data/characters.js =====
+// 角色档案：中国队 = 中国历史战斗英雄；美国队 = 漫威电影人物
+// 每个角色都有独立外观（肤色/发型/胡须/盔甲/徽记/武器）与自我特性（血量/移速/伤害/称号）
+// 字段说明：
+//   name      显示名（头顶标签）
+//   title     特性称号（HUD/简介用）
+//   skin      肤色
+//   hair      发色（null=光头）
+//   beard     是否有胡须
+//   beardColor 胡须颜色
+//   primary   盔甲/衣主色
+//   secondary 盔甲/衣暗色
+//   accent    点缀色（金/银/红）
+//   helmet    头盔风格 key（见 drawHumanoid 的 drawHead）
+//   emblem    胸前/头顶徽记文字
+//   weaponStyle 武器外观风格（见 drawPixelWeapon）
+//   curWeapon 出场默认武器索引（对应队伍装备）
+//   hpBonus   额外血量（仅我方英雄生效，敌方固定80以保持3次击杀）
+//   spdMul    移速倍率
+//   dmgMul    伤害倍率（仅敌方漫威生效，影响玩家；我方固定1以保3次击杀）
+
+const CHINA_HEROES = [
+  {
+    name: '关羽', title: '武圣·青龙偃月刀',
+    skin: '#e8a07a', hair: '#161616', beard: true, beardColor: '#161616',
+    primary: '#2e8b57', secondary: '#1c5e3a', accent: '#e8c84a',
+    helmet: 'guan', emblem: '关',
+    weaponStyle: 'glaive', curWeapon: 0,
+    hpBonus: 30, spdMul: 0.95, dmgMul: 1,
+  },
+  {
+    name: '岳飞', title: '精忠报国·银枪',
+    skin: '#eec19a', hair: '#161616', beard: true, beardColor: '#d9d2c4',
+    primary: '#cfd4da', secondary: '#9aa1ab', accent: '#e8c84a',
+    helmet: 'ming', emblem: '岳',
+    weaponStyle: 'spear', curWeapon: 1,
+    hpBonus: 10, spdMul: 1.0, dmgMul: 1,
+  },
+  {
+    name: '花木兰', title: '代父从军·疾风',
+    skin: '#f3c9a6', hair: '#161616', beard: false, beardColor: null,
+    primary: '#b5462f', secondary: '#7d2e1f', accent: '#e8c84a',
+    helmet: 'mulant', emblem: '木',
+    weaponStyle: 'bow', curWeapon: 1,
+    hpBonus: 0, spdMul: 1.18, dmgMul: 1,
+  },
+  {
+    name: '赵云', title: '一身是胆·龙胆亮银枪',
+    skin: '#eac19c', hair: '#161616', beard: false, beardColor: null,
+    primary: '#eef2f6', secondary: '#c2c9d2', accent: '#7fb3e0',
+    helmet: 'bai', emblem: '赵',
+    weaponStyle: 'spear', curWeapon: 1,
+    hpBonus: 5, spdMul: 1.12, dmgMul: 1,
+  },
+  {
+    name: '戚继光', title: '抗倭名将·鸳鸯阵',
+    skin: '#e0ad84', hair: '#161616', beard: true, beardColor: '#2a2a2a',
+    primary: '#3a6ea5', secondary: '#274b73', accent: '#e8c84a',
+    helmet: 'ming2', emblem: '戚',
+    weaponStyle: 'spear', curWeapon: 1,
+    hpBonus: 15, spdMul: 1.0, dmgMul: 1,
+  },
+];
+
+const USA_HEROES = [
+  {
+    name: '美国队长', title: '领袖·星盾',
+    skin: '#e8b890', hair: '#3a2a1a', beard: true, beardColor: '#3a2a1a',
+    primary: '#2a4d8f', secondary: '#1b3568', accent: '#e8c84a',
+    helmet: 'cap', emblem: '★',
+    weaponStyle: 'shield', curWeapon: 2,
+    hpBonus: 0, spdMul: 1.0, dmgMul: 1.1,
+  },
+  {
+    name: '钢铁侠', title: '天才·掌心炮',
+    skin: '#eabf95', hair: '#161616', beard: false, beardColor: null,
+    primary: '#c0392b', secondary: '#8a261d', accent: '#f1c40f',
+    helmet: 'ironman', emblem: 'MK',
+    weaponStyle: 'repulsor', curWeapon: 1,
+    hpBonus: 0, spdMul: 1.05, dmgMul: 1.1,
+  },
+  {
+    name: '雷神', title: '雷霆之神·姆乔尼尔',
+    skin: '#e9bd92', hair: '#d8b24a', beard: true, beardColor: '#d8b24a',
+    primary: '#9aa6b2', secondary: '#6f7884', accent: '#5ad1e6',
+    helmet: 'thor', emblem: '⚡',
+    weaponStyle: 'hammer', curWeapon: 0,
+    hpBonus: 0, spdMul: 1.0, dmgMul: 1.2,
+  },
+  {
+    name: '绿巨人', title: '无敌·浩克',
+    skin: '#5fae4e', hair: null, beard: false, beardColor: null,
+    primary: '#4f9e3f', secondary: '#3a7a2f', accent: '#2e6b27',
+    helmet: 'hulk', emblem: '',
+    weaponStyle: 'fist', curWeapon: 0,
+    hpBonus: 0, spdMul: 0.9, dmgMul: 1.25,
+  },
+  {
+    name: '黑寡妇', title: '间谍·双枪',
+    skin: '#ecc4a0', hair: '#8a1f1f', beard: false, beardColor: null,
+    primary: '#2b2f3a', secondary: '#1a1d24', accent: '#c0392b',
+    helmet: 'widow', emblem: '寡',
+    weaponStyle: 'dualpistol', curWeapon: 2,
+    hpBonus: 0, spdMul: 1.15, dmgMul: 1.0,
+  },
+];
+
 // ===== data/tasks.js =====
 // 任务模板（按难度分级，奖励金银铜）
 const TASK_TEMPLATES = [
@@ -773,7 +880,7 @@ function fireWeapon(shooter, tx, ty, ctx) {
     y: shooter.y + ny * (shooter.radius + 4),
     vx: nx * PROJ_SPEED[type],
     vy: ny * PROJ_SPEED[type],
-    dmg: w.dmg, team: shooter.team, silent: w.silent,
+    dmg: w.dmg * (shooter.dmgMul || 1), team: shooter.team, silent: w.silent,
     noise: w.noise, kind: type, life: type === 'bullet' ? 0.9 : 1.6,
     range: w.range, traveled: 0,
   });
@@ -801,7 +908,7 @@ function meleeHit(shooter, w, ctx) {
       let diff = Math.abs(ang - shooter.facing);
       if (diff > Math.PI) diff = 2 * Math.PI - diff;
       if (diff < 1.1) {
-        ctx.combat.damage(u, w.dmg);
+        ctx.combat.damage(u, w.dmg * (shooter.dmgMul || 1));
         hitSomething = true;
       }
     }
@@ -1000,10 +1107,14 @@ class Unit {
     this.color = team === 'china' ? '#2e8b57' : '#c0392b';
     this.name = '';       // 用于队友/敌人标识
     this.walkPhase = 0;   // 行走动画相位
+    this.profile = null;  // 外观/特性档案（英雄/漫威角色）
+    this.hpBonus = 0;     // 额外血量
+    this.spdMul = 1;      // 移速倍率（特性）
+    this.dmgMul = 1;      // 伤害倍率（特性，仅敌方生效）
   }
 
   speedMul() {
-    let m = 1;
+    let m = this.spdMul || 1;
     if (this.hasSnowmobile) m *= 1.4;
     return m;
   }
@@ -1390,7 +1501,7 @@ function drawHUD(ctx, game) {
   Render.text(ctx, `眼镜${eq.glassesUnlocked ? eq.glassesBattery + '%' : '未解锁'}  发现器${eq.detectorLevel}${eq.detectorActive ? '(开)' : ''}`, 260, 22, '#cfe', 13);
   Render.text(ctx, `信誉${game.reputation.value} (${game.reputation.rank()})  折扣${game.reputation.discount()}`, 260, 44, '#fec', 13);
   const allyAlive = game.allies.filter((a) => a.alive).length;
-  Render.text(ctx, `队友${allyAlive}/2`, 520, 44, allyAlive > 0 ? '#5fd3ff' : '#f88', 13);
+  Render.text(ctx, `队友${allyAlive}/5`, 520, 44, allyAlive > 0 ? '#5fd3ff' : '#f88', 13);
   const cw = game.player.weapons[game.player.curWeapon];
   const ammoTxt = cw.ammoMax ? `弹${cw.ammo}/${cw.ammoMax}` : (cw.kind === 'trap' ? `陷阱×${game.player.traps}` : '近战∞');
   Render.text(ctx, `水${Math.round(game.player.water)}%  [${game.player.curWeapon + 1}]${cw.name} ${ammoTxt}  陷阱${game.player.traps}`, 520, 22, '#fff', 13);
@@ -1660,6 +1771,7 @@ class Shop {
 
 
 
+
 class Game {
   constructor(canvas) {
     this.canvas = canvas;
@@ -1739,36 +1851,43 @@ class Game {
   spawnEnemies() {
     const foe = this.foe();
     const b = BASE[foe];
+    const heroes = foe === 'usa' ? USA_HEROES : CHINA_HEROES;
     const arr = [];
     for (let i = 0; i < 5; i++) { // 原来是8个敌人，减到5降低压迫感
       const ex = (b.tx + this.rng.range(0, b.tw)) * TILE;
       const ey = (b.ty + this.rng.range(0, b.th)) * TILE;
       const e = new Unit(foe, ex, ey);
-      e.maxHp = ENEMY_HP; e.hp = ENEMY_HP; // 保证我方3次命中击杀
+      e.maxHp = ENEMY_HP; e.hp = ENEMY_HP; // 保证我方3次命中击杀（敌方固定80，不叠加英雄血量）
       e.weapons.forEach((w) => (w.ammo = 9999));
       e.ai.homeX = ex; e.ai.homeY = ey;
       if (foe === 'usa' && i < 2) e.ai.raider = true; // 袭击者从3减到2
       if (foe === 'china') e.traps = 2;
-      e.name = (foe === 'china' ? '中国兵' : '美军') + (i + 1);
+      const p = heroes[i % heroes.length];
+      e.profile = p; e.name = p.name; e.color = p.primary;
+      e.spdMul = p.spdMul || 1; e.dmgMul = p.dmgMul || 1; e.curWeapon = p.curWeapon || 0;
       arr.push(e);
     }
     return arr;
   }
 
-  // 我方AI队友：开局在基地附近生成2人，跟随玩家并主动迎敌
+  // 我方AI队友：开局在基地附近生成5名中国历史战斗英雄，跟随玩家并主动迎敌
   spawnAllies() {
     const team = this.team;
     const b = BASE[team];
+    const heroes = team === 'china' ? CHINA_HEROES : USA_HEROES;
     const arr = [];
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < heroes.length; i++) {
       const ax = (b.tx + this.rng.range(1, b.tw - 1)) * TILE;
       const ay = (b.ty + this.rng.range(1, b.th - 1)) * TILE;
       const a = new Unit(team, ax, ay);
       a.isPlayer = false;
-      a.maxHp = ALLY_HP; a.hp = ALLY_HP;
+      const p = heroes[i];
+      a.profile = p; a.name = p.name; a.color = p.primary;
+      a.maxHp = ALLY_HP + (p.hpBonus || 0); a.hp = a.maxHp;
+      a.spdMul = p.spdMul || 1; a.dmgMul = 1; // 我方伤害固定1，保持"3次击杀"平衡
+      a.curWeapon = p.curWeapon || 0;
       a.weapons.forEach((w) => { if (w.ammoMax) w.ammo = w.ammoMax; });
       a.ai.homeX = ax; a.ai.homeY = ay; a.ai.timer = 0; a.ai.state = 'follow';
-      a.name = '队友' + (i + 1);
       arr.push(a);
     }
     return arr;
@@ -2009,7 +2128,71 @@ class Game {
     // 高清直绘：世界直接画到主画布（不缩放、保留全部细节）
     this.drawWorld(ctx);
 
+    // 背景与画面特效：远景天际带 + 大气光 + 暗角 + 漂浮微粒
+    this.drawSceneFX(ctx, this.camera);
+
     drawHUD(ctx, this);
+  }
+
+  // 逼真背景：顶部远景天际带（视差山脉/流云/太阳辉光）+ 大气光 + 暗角 + 漂浮微粒
+  drawSceneFX(ctx, cam) {
+    const vw = this.vw, vh = this.vh, t = this.time;
+    // ---- 顶部远景天际带（始终可见，营造纵深）----
+    const H = Math.min(96, vh * 0.16);
+    const sky2 = ctx.createLinearGradient(0, 0, 0, H);
+    sky2.addColorStop(0, '#bfe3ff');
+    sky2.addColorStop(0.7, '#dcefff');
+    sky2.addColorStop(1, 'rgba(220,239,255,0)');
+    ctx.fillStyle = sky2;
+    ctx.fillRect(0, 0, vw, H);
+    // 太阳辉光（右上）
+    const sg = ctx.createRadialGradient(vw * 0.82, H * 0.5, 4, vw * 0.82, H * 0.5, 60);
+    sg.addColorStop(0, 'rgba(255,250,210,0.9)'); sg.addColorStop(1, 'rgba(255,250,210,0)');
+    ctx.fillStyle = sg; ctx.fillRect(vw * 0.6, 0, vw * 0.4, H);
+    // 远山（两层视差）
+    const drawHills = (par, col, baseY, amp) => {
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.moveTo(0, H);
+      for (let x = 0; x <= vw; x += 16) {
+        const wx = x + cam.x * par;
+        const y = baseY + Math.sin(wx * 0.004) * amp + Math.sin(wx * 0.011) * amp * 0.5;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(vw, H); ctx.closePath(); ctx.fill();
+    };
+    drawHills(0.15, 'rgba(150,180,210,0.55)', H * 0.62, 14);
+    drawHills(0.30, 'rgba(110,150,190,0.7)', H * 0.78, 10);
+    // 流云（视差漂移）
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    for (let i = 0; i < 4; i++) {
+      const cx = (i * 260 + (t * 12) + cam.x * 0.1) % (vw + 160) - 80;
+      const cy = H * (0.28 + 0.12 * (i % 2));
+      ctx.beginPath(); ctx.ellipse(cx, cy, 34, 12, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx + 26, cy + 4, 24, 9, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx - 24, cy + 4, 20, 8, 0, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // ---- 全屏大气光（右上阳光方向）----
+    const lg = ctx.createRadialGradient(vw * 0.8, vh * 0.2, vh * 0.2, vw * 0.8, vh * 0.2, vh * 1.1);
+    lg.addColorStop(0, 'rgba(255,248,220,0.10)');
+    lg.addColorStop(0.5, 'rgba(255,248,220,0)');
+    lg.addColorStop(1, 'rgba(20,30,40,0.10)');
+    ctx.fillStyle = lg; ctx.fillRect(0, 0, vw, vh);
+
+    // ---- 边缘暗角 ----
+    const vg = ctx.createRadialGradient(vw / 2, vh / 2, vh * 0.35, vw / 2, vh / 2, vh * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.22)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, vw, vh);
+
+    // ---- 漂浮微粒（花粉/尘埃，缓慢上升）----
+    ctx.fillStyle = 'rgba(255,255,240,0.35)';
+    for (let i = 0; i < 26; i++) {
+      const px = (i * 137.5 + cam.x * 0.5) % vw;
+      const py = (vh - ((i * 53 + t * 14) % (vh + 20)));
+      const s = (i % 3) * 0.6 + 0.6;
+      ctx.beginPath(); ctx.arc(px, py, s, 0, Math.PI * 2); ctx.fill();
+    }
   }
 
   drawWorld(ctx) {
@@ -2072,16 +2255,19 @@ class Game {
       }
     }
 
-    // ---- 基地区域：带建筑感 ----
+    // ---- 基地区域：国籍主题石板广场 ----
     for (let ty = y0; ty < y1; ty++) {
       for (let tx = x0; tx < x1; tx++) {
         const c = this.world.grid[ty][tx];
         const isChina = c === T.BASE_C, isUSA = c === T.BASE_U;
         if (!isChina && !isUSA) continue;
         const sx = tx * TILE - cam.x, sy = ty * TILE - cam.y;
-        drawBaseTile(ctx, sx, sy, tx, ty, isChina ? 'china' : 'usa', snow);
+        drawBaseFloor(ctx, sx, sy, tx, ty, isChina ? 'china' : 'usa');
       }
     }
+    // 基地上方叠加国籍主题装饰（旗帜/徽记/门楼）
+    drawBaseDecor(ctx, BASE.china, 'china', cam);
+    drawBaseDecor(ctx, BASE.usa, 'usa', cam);
 
     // ---- 树木：真正的树形（阴影+树干+多层树冠）----
     for (let ty = y0; ty < y1; ty++) {
@@ -2279,71 +2465,144 @@ function drawDiamond(ctx, x, y, r, color) {
 }
 
 // 高清武器绘制（随朝向旋转，渐变金属质感）
+// 颜色明暗调整（f>0 变亮，f<0 变暗）
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  r = Math.max(0, Math.min(255, Math.round(r * (1 + f))));
+  g = Math.max(0, Math.min(255, Math.round(g * (1 + f))));
+  b = Math.max(0, Math.min(255, Math.round(b * (1 + f))));
+  return `rgb(${r},${g},${b})`;
+}
+
+// 五角星
+function drawStar(ctx, cx, cy, r, points) {
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const rad = i % 2 === 0 ? r : r * 0.45;
+    const a = -Math.PI / 2 + (i * Math.PI) / points;
+    const x = cx + Math.cos(a) * rad, y = cy + Math.sin(a) * rad;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+// 单位手持武器（按英雄 weaponStyle 或武器 kind 绘制）
 function drawPixelWeapon(ctx, hx, hy, u, teamCol) {
   const w = u.weapons[u.curWeapon];
+  const style = (u.profile && u.profile.weaponStyle) || w.kind;
   ctx.save();
   ctx.translate(Math.round(hx), Math.round(hy));
   ctx.rotate(u.facing);
-  if (w.kind === 'melee') {
-    // 金属刀身 + 金色护手
-    const bg = ctx.createLinearGradient(0, -2, 0, 2);
-    bg.addColorStop(0, '#e8eef5'); bg.addColorStop(0.5, '#9aa5b5'); bg.addColorStop(1, '#555f6a');
-    ctx.fillStyle = bg;
-    ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(17, -1); ctx.lineTo(17, 1); ctx.lineTo(0, 2); ctx.closePath(); ctx.fill();
-    // 高光刃口
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(16, -1); ctx.stroke();
-    // 金色护手
-    ctx.fillStyle = '#d4a246';
-    ctx.beginPath(); ctx.ellipse(-3, 0, 3, 4, 0, 0, Math.PI * 2); ctx.fill();
-  } else if (w.kind === 'ranged') {
-    // 枪身渐变
-    const bg = ctx.createLinearGradient(0, -2, 0, 2);
-    bg.addColorStop(0, '#5a6470'); bg.addColorStop(0.5, '#3a4450'); bg.addColorStop(1, '#1f252e');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, -3, 19, 6);
-    // 准星/瞄具
-    ctx.fillStyle = '#7a8492';
-    ctx.beginPath(); ctx.moveTo(12, -5); ctx.lineTo(14, -5); ctx.lineTo(14, 5); ctx.lineTo(12, 5); ctx.closePath(); ctx.fill();
-    // 弹匣/握把
-    ctx.fillStyle = teamCol;
-    ctx.beginPath(); ctx.ellipse(-2, 0, 2.5, 3.5, 0, 0, Math.PI * 2); ctx.fill();
-  } else if (w.kind === 'thrown') {
-    // 圆形手雷
-    const rg = ctx.createRadialGradient(11, -2, 1, 11, -2, 5);
-    rg.addColorStop(0, '#f8c04a'); rg.addColorStop(0.7, '#d4782a'); rg.addColorStop(1, '#5a2d10');
-    ctx.fillStyle = rg;
-    ctx.beginPath(); ctx.arc(11, -2, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1;
-    ctx.stroke();
-    // 拉环
-    ctx.strokeStyle = '#999'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(11, -2, 3.5, -0.5, 1.5); ctx.stroke();
-  } else if (w.kind === 'trap') {
-    // 捕兽夹
-    ctx.fillStyle = '#7a5580';
-    ctx.beginPath(); ctx.arc(7, -2, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#d4a'; ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(7, -7); ctx.lineTo(7, 3); ctx.moveTo(2, -2); ctx.lineTo(12, -2); ctx.stroke();
+  switch (style) {
+    case 'glaive': { // 青龙偃月刀
+      ctx.fillStyle = '#6b4a2a'; ctx.fillRect(0, -1.5, 20, 3);
+      ctx.fillStyle = '#2f9a47';
+      ctx.beginPath(); ctx.moveTo(20, -2); ctx.quadraticCurveTo(31, -11, 26, 3); ctx.quadraticCurveTo(22, -2, 20, 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(200,255,210,0.55)';
+      ctx.beginPath(); ctx.moveTo(21, -3); ctx.quadraticCurveTo(29, -9, 25, 0); ctx.lineTo(20, 0); ctx.closePath(); ctx.fill();
+      break;
+    }
+    case 'spear': { // 长枪
+      ctx.fillStyle = '#6b4a2a'; ctx.fillRect(0, -1.5, 19, 3);
+      const sg = ctx.createLinearGradient(19, -3, 19, 3);
+      sg.addColorStop(0, '#e8eef5'); sg.addColorStop(1, '#9aa5b5');
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.moveTo(19, -3); ctx.lineTo(29, 0); ctx.lineTo(19, 3); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(19, -2); ctx.lineTo(28, 0); ctx.stroke();
+      break;
+    }
+    case 'bow': { // 弓
+      ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(5, 0, 9, -Math.PI * 0.6, Math.PI * 0.6); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(5 + Math.cos(-Math.PI * 0.6) * 9, Math.sin(-Math.PI * 0.6) * 9);
+      ctx.lineTo(5 + Math.cos(Math.PI * 0.6) * 9, Math.sin(Math.PI * 0.6) * 9); ctx.stroke();
+      break;
+    }
+    case 'shield': { // 星盾（美队）
+      ctx.fillStyle = '#2a4d8f'; ctx.beginPath(); ctx.arc(-2, 0, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#e8c84a'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#fff'; drawStar(ctx, -2, 0, 4, 5);
+      ctx.fillStyle = '#3a4450'; ctx.fillRect(4, -2, 9, 4);
+      ctx.fillStyle = '#5a6470'; ctx.fillRect(5, -2, 5, 1.5);
+      break;
+    }
+    case 'repulsor': { // 掌心炮（钢铁侠）
+      const rg = ctx.createRadialGradient(6, 0, 1, 6, 0, 9);
+      rg.addColorStop(0, '#eafdff'); rg.addColorStop(0.4, '#5ad1e6'); rg.addColorStop(1, 'rgba(90,209,230,0)');
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(6, 0, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(0, -2, 5, 4);
+      break;
+    }
+    case 'hammer': { // 雷神之锤
+      ctx.fillStyle = '#6b4a2a'; ctx.fillRect(0, -1.5, 14, 3);
+      const hg = ctx.createLinearGradient(13, -6, 13, 6);
+      hg.addColorStop(0, '#e8eef5'); hg.addColorStop(1, '#8a93a0');
+      ctx.fillStyle = hg; roundRect(ctx, 13, -6, 7, 12, 2);
+      ctx.fillStyle = 'rgba(90,209,230,0.55)'; ctx.fillRect(14, -5, 5, 10);
+      break;
+    }
+    case 'fist': { // 双拳（浩克）
+      ctx.fillStyle = '#3a7a2f'; ctx.beginPath(); ctx.arc(5, 0, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#2e6b27'; ctx.beginPath(); ctx.arc(5, 0, 2, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
+    case 'dualpistol': { // 双枪（黑寡妇）
+      ctx.fillStyle = '#2b3038'; ctx.fillRect(0, -3, 8, 3); ctx.fillRect(0, 1, 8, 3);
+      ctx.fillStyle = '#5a6470'; ctx.fillRect(2, -3, 5, 1.5); ctx.fillRect(2, 2.5, 5, 1.5);
+      break;
+    }
+    default: { // 通用：按武器 kind
+      if (w.kind === 'melee') {
+        const bg = ctx.createLinearGradient(0, -2, 0, 2);
+        bg.addColorStop(0, '#e8eef5'); bg.addColorStop(0.5, '#9aa5b5'); bg.addColorStop(1, '#555f6a');
+        ctx.fillStyle = bg;
+        ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(17, -1); ctx.lineTo(17, 1); ctx.lineTo(0, 2); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(16, -1); ctx.stroke();
+      } else if (w.kind === 'ranged') {
+        const bg = ctx.createLinearGradient(0, -2, 0, 2);
+        bg.addColorStop(0, '#5a6470'); bg.addColorStop(0.5, '#3a4450'); bg.addColorStop(1, '#1f252e');
+        ctx.fillStyle = bg; ctx.fillRect(0, -3, 19, 6);
+        ctx.fillStyle = '#7a8492';
+        ctx.beginPath(); ctx.moveTo(12, -5); ctx.lineTo(14, -5); ctx.lineTo(14, 5); ctx.lineTo(12, 5); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = teamCol; ctx.beginPath(); ctx.ellipse(-2, 0, 2.5, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+      } else if (w.kind === 'thrown') {
+        const rg = ctx.createRadialGradient(11, -2, 1, 11, -2, 5);
+        rg.addColorStop(0, '#f8c04a'); rg.addColorStop(0.7, '#d4782a'); rg.addColorStop(1, '#5a2d10');
+        ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(11, -2, 5, 0, Math.PI * 2); ctx.fill();
+      } else if (w.kind === 'trap') {
+        ctx.fillStyle = '#7a5580'; ctx.beginPath(); ctx.arc(7, -2, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#d4a'; ctx.lineWidth = 1.5; ctx.stroke();
+      }
+    }
   }
-  // 枪口火焰
+  // 枪口火光
   if (u.muzzle > 0) {
     const ma = ctx.createRadialGradient(19, 0, 1, 19, 0, 7);
     ma.addColorStop(0, '#fff'); ma.addColorStop(0.3, '#ffe860'); ma.addColorStop(0.7, 'rgba(255,150,30,0.6)'); ma.addColorStop(1, 'rgba(255,80,10,0)');
-    ctx.fillStyle = ma;
-    ctx.beginPath(); ctx.arc(19, 0, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = ma; ctx.beginPath(); ctx.arc(19, 0, 7, 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
 }
 
-// 高清人形角色：圆润头部 + 渐变躯干 + 四肢 + 阴影
+// 高清人形角色：逼真脸/发型/胡须/头盔 + 渐变躯干 + 徽记 + 名字
 function drawHumanoid(ctx, sx, sy, u, time, playerTeam) {
   const r = u.radius;
-  const teamCol = u.team === 'china' ? COLORS.china : COLORS.usa;
-  const teamDark = u.team === 'china' ? '#1d7a40' : '#b83227';
-  const skin = COLORS.skin;
-  const skinDark = '#d3a065';
+  const p = u.profile;
+  const primary = p ? p.primary : (u.team === 'china' ? COLORS.china : COLORS.usa);
+  const secondary = p ? p.secondary : (u.team === 'china' ? '#1d7a40' : '#b83227');
+  const accent = p ? (p.accent || '#e8c84a') : '#e8c84a';
+  const skin = p ? p.skin : COLORS.skin;
+  const skinDark = shade(skin, -0.2);
+  const hair = p ? p.hair : null;
+  const beard = p ? p.beard : false;
+  const beardColor = p ? p.beardColor : null;
+  const helmet = p ? p.helmet : 'basic';
+  const emblem = p ? p.emblem : '';
   const cx = Math.round(sx);
 
   // 柔和椭圆阴影
@@ -2356,7 +2615,7 @@ function drawHumanoid(ctx, sx, sy, u, time, playerTeam) {
   const feetY = Math.round(cy + r);
   const legH = 6, torsoH = 12, headR = 6, torsoW = 13, shoulderY = feetY - legH - torsoH;
   const headY = shoulderY - headR * 2 - 1;
-  const headCX = cx;
+  const facingRight = Math.cos(u.facing) >= 0;
 
   // --- 腿（圆角）---
   const lg = ctx.createLinearGradient(0, feetY - legH, 0, feetY);
@@ -2364,50 +2623,31 @@ function drawHumanoid(ctx, sx, sy, u, time, playerTeam) {
   ctx.fillStyle = lg;
   roundRect(ctx, cx - 5, feetY - legH, 4, legH, 1.5);
   roundRect(ctx, cx + 1, feetY - legH, 4, legH, 1.5);
-  // 靴子
   ctx.fillStyle = '#1f2329';
   roundRect(ctx, cx - 5.5, feetY - 2, 5, 3, 1);
   roundRect(ctx, cx + 0.5, feetY - 2, 5, 3, 1);
 
-  // --- 躯干（渐变队色，圆角矩形）---
+  // --- 躯干（渐变盔甲 + 高光 + 腰带 + 徽记）---
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   roundRect(ctx, cx - torsoW / 2 - 1, shoulderY - 1, torsoW + 2, torsoH + 2, 3);
   const tg = ctx.createLinearGradient(0, shoulderY, 0, shoulderY + torsoH);
-  tg.addColorStop(0, teamCol); tg.addColorStop(1, teamDark);
+  tg.addColorStop(0, primary); tg.addColorStop(1, secondary);
   ctx.fillStyle = tg;
   roundRect(ctx, cx - torsoW / 2, shoulderY, torsoW, torsoH, 2.5);
-  // 躯干高光（左上受光）
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
   roundRect(ctx, cx - torsoW / 2, shoulderY, torsoW, torsoH * 0.4, 2.5);
-  // 腰带
   ctx.fillStyle = '#1f2329';
   roundRect(ctx, cx - torsoW / 2 - 1, shoulderY + torsoH - 3.5, torsoW + 2, 3.5, 1.5);
+  if (emblem) {
+    ctx.fillStyle = accent;
+    Render.text(ctx, emblem, cx, shoulderY + torsoH * 0.55, accent, 9, 'center');
+  }
 
-  // --- 头（圆形渐变 + 头盔）---
-  const hg = ctx.createRadialGradient(headCX - 1, headY - 1, 1, headCX, headY, headR);
-  hg.addColorStop(0, skin); hg.addColorStop(1, skinDark);
-  ctx.fillStyle = hg;
-  ctx.beginPath(); ctx.arc(headCX, headY, headR, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1;
-  ctx.stroke();
-  // 头盔（上半弧形）
-  ctx.fillStyle = teamCol;
-  ctx.beginPath(); ctx.arc(headCX, headY - 1, headR + 1, Math.PI, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = teamDark; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.arc(headCX, headY - 1, headR + 1, Math.PI, Math.PI * 2); ctx.stroke();
-  // 头盔高光
-  ctx.fillStyle = 'rgba(255,255,255,0.25)';
-  ctx.beginPath(); ctx.arc(headCX - 2, headY - 3, 3, 0, Math.PI * 2); ctx.fill();
-  // 眼睛
-  const facingRight = Math.cos(u.facing) >= 0;
-  const ex = facingRight ? 2 : -2;
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(headCX + ex - 1, headY - 1, 2, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#111';
-  ctx.beginPath(); ctx.arc(headCX + ex - 0.5, headY - 1, 1.2, 0, Math.PI * 2); ctx.fill();
+  // --- 头（逼真脸 + 发型/胡须/头盔/眼睛）---
+  drawHead(ctx, cx, headY, headR, { skin, skinDark, hair, beard, beardColor, helmet, accent, primary, facingRight });
 
   // --- 手臂 + 武器 ---
-  drawPixelWeapon(ctx, cx, shoulderY + 6, u, teamCol);
+  drawPixelWeapon(ctx, cx, shoulderY + 6, u, primary);
 
   // --- 玩家白色光环 ---
   if (u.isPlayer) {
@@ -2428,9 +2668,102 @@ function drawHumanoid(ctx, sx, sy, u, time, playerTeam) {
   roundRect(ctx, cx - bw2 / 2, barY, bw2 * hpRatio, 3, 1.5);
 
   // --- 名字标签 ---
-  const isEnemy = u.team !== playerTeam;
-  const label = u.isPlayer ? '你' : (isEnemy ? '敌' : '友');
-  Render.text(ctx, label, cx, headY - 14, u.isPlayer ? '#fff' : teamCol, 10, 'center');
+  let label, labelCol;
+  if (u.isPlayer) { label = '你'; labelCol = '#ffffff'; }
+  else if (p) { label = p.name; labelCol = u.team === 'china' ? '#ffe08a' : '#ffd0c0'; }
+  else { label = u.team === playerTeam ? '友' : '敌'; labelCol = primary; }
+  Render.text(ctx, label, cx, headY - 14, labelCol, 10, 'center');
+}
+
+// 逼真头部：肤色渐变 + 发型 + 胡须 + 头盔 + 眼睛朝向
+function drawHead(ctx, hx, hy, R, o) {
+  const { skin, skinDark, hair, beard, beardColor, helmet, accent, primary, facingRight } = o;
+  // 脸
+  const hg = ctx.createRadialGradient(hx - 1, hy - 1, 1, hx, hy, R);
+  hg.addColorStop(0, skin); hg.addColorStop(1, skinDark);
+  ctx.fillStyle = hg;
+  ctx.beginPath(); ctx.arc(hx, hy, R, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 0.8; ctx.stroke();
+
+  // 头发（顶部 / 长发后披）；钢铁侠面甲覆盖则不画头发
+  if (hair && helmet !== 'ironman' && helmet !== 'hulk') {
+    ctx.fillStyle = hair;
+    if (helmet === 'thor' || helmet === 'widow') {
+      ctx.beginPath(); ctx.arc(hx, hy, R + 1.5, Math.PI * 0.8, Math.PI * 2.2); ctx.fill();
+      ctx.fillRect(hx - R - 1, hy, 2.5, R); ctx.fillRect(hx + R - 1.5, hy, 2.5, R);
+    } else {
+      ctx.beginPath(); ctx.arc(hx, hy, R + 0.5, Math.PI, Math.PI * 2); ctx.fill();
+    }
+  }
+  // 胡须
+  if (beard && beardColor) {
+    ctx.fillStyle = beardColor;
+    ctx.beginPath();
+    ctx.moveTo(hx - R * 0.7, hy + R * 0.2);
+    ctx.quadraticCurveTo(hx, hy + R * 1.4, hx + R * 0.7, hy + R * 0.2);
+    ctx.quadraticCurveTo(hx, hy + R * 0.5, hx - R * 0.7, hy + R * 0.2);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // 头盔 / 面部装饰
+  drawHelmet(ctx, hx, hy, R, o);
+
+  // 眼睛（面向侧）
+  const ex = facingRight ? 1.5 : -1.5;
+  if (helmet === 'ironman') {
+    ctx.fillStyle = '#7fe9ff';
+    ctx.beginPath(); ctx.ellipse(hx + ex - 0.5, hy - 1, 1.6, 1, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(hx + ex + 2.5, hy - 1, 1.6, 1, 0, 0, Math.PI * 2); ctx.fill();
+  } else if (helmet === 'hulk') {
+    ctx.fillStyle = '#16260f';
+    ctx.beginPath(); ctx.arc(hx + ex - 0.5, hy - 0.5, 1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx + ex + 2, hy - 0.5, 1, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#16260f'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(hx + ex - 1.5, hy - 2); ctx.lineTo(hx + ex + 0.5, hy - 1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hx + ex + 1, hy - 1); ctx.lineTo(hx + ex + 3, hy - 2); ctx.stroke();
+  } else {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(hx + ex - 0.5, hy - 1, 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath(); ctx.arc(hx + ex - 0.2, hy - 1, 0.9, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// 头盔 / 头部装饰（按风格）
+function drawHelmet(ctx, hx, hy, R, o) {
+  const { helmet, primary, accent } = o;
+  if (helmet === 'ironman') {
+    ctx.fillStyle = primary;
+    roundRect(ctx, hx - R, hy - R, R * 2, R + 2, R * 0.6); // 面甲只盖上半脸，下巴留肤色
+    ctx.strokeStyle = accent; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(hx, hy - R); ctx.lineTo(hx, hy + R); ctx.stroke();
+    return;
+  }
+  if (helmet === 'thor') {
+    ctx.strokeStyle = accent; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(hx, hy - 1, R * 0.9, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+    return;
+  }
+  if (helmet === 'widow') { ctx.fillStyle = accent; ctx.fillRect(hx - R, hy - 2, R * 2, 2); return; }
+  if (helmet === 'hulk') return;
+  // 其余：头顶盔/帽（上半弧）
+  let col = primary;
+  if (helmet === 'guan') col = '#1f7a40';
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.arc(hx, hy, R + 1, Math.PI, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 0.8; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.beginPath(); ctx.arc(hx - 2, hy - R * 0.6, R * 0.4, Math.PI, Math.PI * 2); ctx.fill();
+  if (helmet === 'guan') { ctx.fillStyle = '#e23b2e'; ctx.beginPath(); ctx.arc(hx, hy - R - 0.5, 2, 0, Math.PI * 2); ctx.fill(); }
+  else if (helmet === 'ming' || helmet === 'ming2' || helmet === 'mulant') { ctx.fillStyle = '#e23b2e'; ctx.beginPath(); ctx.arc(hx, hy - R, 1.6, 0, Math.PI * 2); ctx.fill(); }
+  if (helmet === 'mulant') {
+    ctx.fillStyle = primary;
+    ctx.beginPath(); ctx.arc(hx - R - 1, hy - R * 0.3, 2.4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx + R + 1, hy - R * 0.3, 2.4, 0, Math.PI * 2); ctx.fill();
+  }
+  if (helmet === 'cap') { ctx.fillStyle = '#fff'; drawStar(ctx, hx, hy - R * 0.3, 2.2, 5); }
+  if (helmet === 'bai') { ctx.strokeStyle = accent; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(hx, hy, R + 1, Math.PI, Math.PI * 2); ctx.stroke(); }
 }
 
 // 圆角矩形辅助函数
@@ -2569,25 +2902,91 @@ function drawLakeTile(ctx, sx, sy, tx, ty, time) {
   for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.arc(sx + 10 + i * 18 + Math.sin(t + i) * 2, sy + 14 + i * 12, 2, 0, Math.PI * 2); ctx.fill(); }
 }
 
-// 逼真基地：立体墙渐变 + 砖缝 + 门窗凹龛 + 檐口高光
-function drawBaseTile(ctx, sx, sy, tx, ty, team, snow) {
+// 国籍主题石板广场（逐格铺地）
+function drawBaseFloor(ctx, sx, sy, tx, ty, team) {
   const isChina = team === 'china';
-  const dark = isChina ? '#1c7a44' : '#a8362c';
-  const light = isChina ? '#57d089' : '#f5816e';
+  const base = isChina ? '#caa05a' : '#9aa6c8';   // 石板暖/冷色
+  const dark = isChina ? '#9c7838' : '#6f7c9e';
   const bg = ctx.createLinearGradient(sx, sy, sx, sy + TILE);
-  bg.addColorStop(0, light); bg.addColorStop(1, dark);
-  ctx.fillStyle = dark; ctx.fillRect(sx, sy, TILE, TILE);
-  ctx.fillStyle = bg; ctx.fillRect(sx + 1, sy + 1, TILE - 2, TILE - 2);
-  ctx.strokeStyle = 'rgba(0,0,0,0.16)'; ctx.lineWidth = 1;
-  for (let yy = sy + 7; yy < sy + TILE; yy += 7) { ctx.beginPath(); ctx.moveTo(sx + 1, yy); ctx.lineTo(sx + TILE - 1, yy); ctx.stroke(); }
-  const mx = sx + TILE / 2, my = sy + TILE / 2;
-  ctx.fillStyle = 'rgba(0,0,0,0.28)';
-  ctx.fillRect(mx - 6, my - 7, 12, 14);
-  ctx.fillStyle = isChina ? 'rgba(180,255,210,0.5)' : 'rgba(255,220,210,0.5)';
-  ctx.fillRect(mx - 4, my - 5, 8, 5);
-  ctx.fillStyle = 'rgba(255,255,255,0.25)';
-  ctx.fillRect(sx + 1, sy + 1, TILE - 2, 2);
-  if (snow) { ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(sx + 1, sy + 1, TILE - 2, 3); }
+  bg.addColorStop(0, base); bg.addColorStop(1, dark);
+  ctx.fillStyle = bg; ctx.fillRect(sx, sy, TILE, TILE);
+  // 石板格缝
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1;
+  ctx.strokeRect(sx + 0.5, sy + 0.5, TILE - 1, TILE - 1);
+  // 国籍色边角点缀
+  if ((tx + ty) % 2 === 0) {
+    ctx.fillStyle = isChina ? 'rgba(200,30,40,0.25)' : 'rgba(40,70,150,0.25)';
+    ctx.fillRect(sx + 4, sy + 4, TILE - 8, TILE - 8);
+  }
+}
+
+// 基地上方国籍主题装饰（旗帜 / 徽记 / 门楼 / 灯笼或栅栏）
+function drawBaseDecor(ctx, b, team, cam) {
+  const cx = (b.tx + b.tw / 2) * TILE - cam.x;
+  const cy = (b.ty + b.th / 2) * TILE - cam.y;
+  const isChina = team === 'china';
+  const pr = isChina ? '#c4282e' : '#2a4d8f';
+  const sc = isChina ? '#e8c84a' : '#eef2f8';
+  // 地面大徽记
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = isChina ? 'rgba(200,30,40,0.18)' : 'rgba(40,70,150,0.18)';
+  ctx.beginPath(); ctx.arc(cx, cy, 34, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = isChina ? 'rgba(200,30,40,0.5)' : 'rgba(40,70,150,0.5)';
+  ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, 34, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = isChina ? '#c4282e' : '#2a4d8f';
+  if (isChina) Render.text(ctx, '中', cx, cy + 10, '#c4282e', 30, 'center');
+  else { ctx.fillStyle = '#2a4d8f'; drawStar(ctx, cx, cy, 13, 5); }
+  ctx.restore();
+
+  // 旗杆 + 国旗（基地顶边中央）
+  const fx = cx, fy = cy - b.th * TILE / 2 - 6;
+  ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 40); ctx.stroke();
+  // 旗面
+  ctx.fillStyle = pr; ctx.fillRect(fx, fy - 40, 34, 22);
+  if (isChina) {
+    // 五星红旗：大星 + 小星
+    ctx.fillStyle = '#e8c84a'; drawStar(ctx, fx + 7, fy - 33, 4, 5);
+    ctx.fillStyle = '#e8c84a';
+    for (const d of [[16, -36], [20, -32], [20, -28], [16, -24]]) drawStar(ctx, fx + d[0], fy + d[1], 1.6, 5);
+  } else {
+    // 星条旗：条纹 + 蓝角星
+    for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#eef2f8' : '#c4282e'; ctx.fillRect(fx, fy - 40 + i * 5.5, 34, 2.8); }
+    ctx.fillStyle = '#2a4d8f'; ctx.fillRect(fx, fy - 40, 14, 11);
+    ctx.fillStyle = '#eef2f8'; drawStar(ctx, fx + 4, fy - 36, 1.6, 5); drawStar(ctx, fx + 9, fy - 36, 1.6, 5);
+  }
+  // 顶饰
+  ctx.fillStyle = sc; ctx.beginPath(); ctx.arc(fx, fy - 40, 2, 0, Math.PI * 2); ctx.fill();
+
+  // 风格化门楼 / 栅栏
+  const w = b.tw * TILE, left = cx - w / 2, top = cy - b.th * TILE / 2;
+  if (isChina) {
+    // 飞檐门楼（红柱 + 金色翘檐）
+    ctx.fillStyle = '#8a1f17'; ctx.fillRect(left, top - 4, 6, 10); ctx.fillRect(left + w - 6, top - 4, 6, 10);
+    const rg = ctx.createLinearGradient(0, top - 16, 0, top - 2);
+    rg.addColorStop(0, '#c4282e'); rg.addColorStop(1, '#8a1f17');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.moveTo(left - 6, top - 2); ctx.quadraticCurveTo(left + w / 2, top - 20, left + w + 6, top - 2);
+    ctx.lineTo(left + w - 4, top - 2); ctx.quadraticCurveTo(left + w / 2, top - 12, left + 4, top - 2);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#e8c84a'; ctx.fillRect(left - 6, top - 4, w + 12, 3);
+    // 红灯笼
+    for (const lx of [left + 10, left + w - 10]) {
+      ctx.fillStyle = '#e23b2e'; ctx.beginPath(); ctx.ellipse(lx, top + 6, 4, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e8c84a'; ctx.fillRect(lx - 1, top + 1, 2, 1.5); ctx.fillRect(lx - 1, top + 11, 2, 1.5);
+    }
+  } else {
+    // 白栅栏
+    ctx.fillStyle = '#eef2f8';
+    for (let i = 0; i <= w; i += 12) ctx.fillRect(left + i, top - 2, 3, 10);
+    ctx.fillRect(left, top + 2, w, 3);
+    // 鹰徽（简笔）
+    ctx.fillStyle = '#cfd6e2';
+    ctx.beginPath(); ctx.moveTo(cx, top + 14); ctx.lineTo(cx - 8, top + 9); ctx.lineTo(cx - 3, top + 12);
+    ctx.lineTo(cx, top + 10); ctx.lineTo(cx + 3, top + 12); ctx.lineTo(cx + 8, top + 9); ctx.closePath(); ctx.fill();
+  }
 }
 
 // 启动
