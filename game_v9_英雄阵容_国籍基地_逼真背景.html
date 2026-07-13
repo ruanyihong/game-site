@@ -1,0 +1,2999 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>森林战术对战 · 中美两队</title>
+  <style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #11151a; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; }
+#game { display: block; position: absolute; inset: 0; cursor: crosshair; }
+
+#overlay {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(8, 12, 18, 0.78); z-index: 20;
+}
+.panel {
+  background: #1c232c; color: #eef; padding: 28px 34px; border-radius: 14px;
+  width: min(560px, 92vw); box-shadow: 0 12px 40px rgba(0,0,0,0.5); border: 1px solid #2c3742;
+}
+.panel h1 { font-size: 28px; margin-bottom: 6px; }
+.panel h2 { font-size: 20px; margin-bottom: 12px; }
+.panel h3 { font-size: 15px; margin: 16px 0 8px; color: #9fb; }
+.panel .sub { color: #aab; margin-bottom: 10px; font-size: 14px; }
+.panel .hint { color: #889; font-size: 12px; margin-top: 14px; line-height: 1.6; }
+.panel .choices { display: flex; gap: 10px; flex-wrap: wrap; }
+.choice {
+  flex: 1; min-width: 160px; text-align: left; background: #26303b; color: #dfe;
+  border: 2px solid transparent; border-radius: 10px; padding: 12px; cursor: pointer; font-size: 15px;
+}
+.choice small { display: block; color: #9ab; font-size: 12px; margin-top: 6px; line-height: 1.5; }
+.choice.sel { border-color: #46c8ff; background: #2c3d4a; }
+.panel button.primary, .panel button {
+  margin-top: 14px; width: 100%; padding: 12px; border: none; border-radius: 10px;
+  background: #46c8ff; color: #062; font-size: 16px; font-weight: 700; cursor: pointer;
+}
+.panel button:not(.primary) { background: #3a4654; color: #eff; margin-top: 8px; }
+
+#shop {
+  position: absolute; inset: 0; display: none;
+  align-items: center; justify-content: center;
+  background: rgba(8,12,18,0.55); z-index: 18;
+}
+#shop > .panel {
+  width: min(580px, 92vw); max-height: 85vh; overflow-y: auto;
+  padding: 22px 28px;
+}
+#shop h2 { font-size: 16px; margin-bottom: 14px; line-height: 1.5; }
+.shoprow { display: flex; align-items: center; justify-content: space-between; margin: 10px 0; font-size: 14px; gap: 12px; }
+.shoprow span { flex: 1 1 auto; min-width: 180px; }
+.shoprow button { background: #46c8ff; color: #062; border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
+#shop .primary { width: 100%; margin-top: 14px; padding: 11px; background: #3a4654; color: #eff; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; }
+
+#pickupBtn {
+  position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%);
+  z-index: 50; background: linear-gradient(180deg, #1f9d6b, #0f6b46); color: #eafff4;
+  border: 2px solid #6effc0; border-radius: 14px; padding: 12px 24px; font-size: 16px; font-weight: 700;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif; cursor: pointer;
+  box-shadow: 0 0 18px rgba(110,255,192,0.6); animation: gemPulse 1s ease-in-out infinite;
+}
+#pickupBtn:hover { background: linear-gradient(180deg, #27c285, #138a58); }
+@keyframes gemPulse {
+  0%, 100% { box-shadow: 0 0 14px rgba(110,255,192,0.5); }
+  50% { box-shadow: 0 0 26px rgba(110,255,192,0.95); }
+}
+
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <script>
+
+// ===== data/config.js =====
+// 全局常量与可调参数
+const TILE = 40;
+const MAP_W = 64;
+const MAP_H = 44;
+const WORLD_W = TILE * MAP_W;
+const WORLD_H = TILE * MAP_H;
+const PIXEL = 1; // 高清直绘：不再使用离屏缩放（保留常量避免引用报错）
+
+// 地形类型
+const T = {
+  GROUND: 0,
+  TREE: 1,
+  ROCK: 2,
+  WATER: 3,
+  RIVERBED: 4,
+  TUNNEL: 5,
+  BASE_C: 6, // 中国基地（东）
+  BASE_U: 7, // 美国基地（西）
+};
+
+// 基地矩形（以 tile 坐标表示）
+const BASE = {
+  china: { tx: MAP_W - 11, ty: Math.floor(MAP_H / 2) - 4, tw: 9, th: 9 },
+  usa: { tx: 2, ty: Math.floor(MAP_H / 2) - 3, tw: 6, th: 6 },
+};
+
+const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
+const SEASON_DURATION = 50; // 自动循环时每季持续秒数
+
+// 探测与战斗基础数值（已为新手降低难度）
+const DETECT_BASE = 180; // 敌人基础察觉半径(px)，原280太远
+const PLAYER_BASE_SPEED = 175; // px/s，略快便于走位
+const ENEMY_BASE_SPEED = 120; // px/s，敌人更慢好躲避
+const ENEMY_HP = 80; // 敌方血量：保证我方默认武器(匕首28/弩34)均恰好命中3次击杀
+const ALLY_HP = 110; // 队友血量
+
+// 水源（夏季缺水惩罚）
+const MAX_WATER = 100;
+const WATER_DRAIN = 4.5; // 每秒消耗
+const WATER_PENALTY_SLOW = 0.55; // 缺水时移速倍率
+
+// 宝石发现器探测半径(px)
+const GEM_DETECT_RADIUS = { A: 160, B: 280, C: 420 };
+
+// 信誉
+const REP_PER_FAKEGOLD = 12;
+
+// 颜色（高清自然色板：草地/树/岩石/水/基地层次分明）
+const COLORS = {
+  ground: '#5a9e3f',       // 草地主色（亮绿）
+  groundAlt: '#4f8f37',    // 草地交替色
+  groundWinter: '#e8eef5',
+  groundWinterAlt: '#d6e0ec',
+  treeDark: '#1f6e34',
+  treeMid: '#2f9a47',
+  treeLight: '#4cc463',
+  treeSnow: '#dfeae3',
+  trunk: '#7a4f2a',
+  rock: '#9aa0a8',
+  rockDark: '#6f757d',
+  rockLight: '#c3c9d0',
+  water: '#2f86d6',
+  waterLight: '#67b0ec',
+  riverbed: '#8a7340',
+  tunnel: '#2a2f3a',
+  baseC: '#1f9e57',
+  baseCDark: '#157a40',
+  baseU: '#e0483a',
+  baseUDark: '#b83227',
+  china: '#2e9b57',
+  usa: '#e0483a',
+  skin: '#f1c27d',
+  outline: '#15181d',
+  gold: '#f1c40f',
+  silver: '#c2c8ce',
+  copper: '#cd7f32',
+  gem: '#46c8ff',
+  fake: '#9b7cd6',
+};
+
+// ===== data/items.js =====
+
+// 地图上可拾取物品类型
+const ITEM = {
+  gold: { label: '金', color: COLORS.gold, value: 10, kind: 'resource' },
+  silver: { label: '银', color: COLORS.silver, value: 4, kind: 'resource' },
+  copper: { label: '铜', color: COLORS.copper, value: 1, kind: 'resource' },
+  gem: { label: '宝石', color: COLORS.gem, value: 25, kind: 'gem' },
+  fakeGold: { label: '假金', color: COLORS.fake, value: 0, kind: 'fake' },
+  waterGem: { label: '无限水源宝石', color: '#39d0ff', value: 0, kind: 'treasure' },
+  snowmobile: { label: '雪地摩托', color: '#ecf0f1', value: 0, kind: 'treasure' },
+};
+
+let _id = 1;
+function makeItem(type, x, y, opts = {}) {
+  return {
+    id: _id++,
+    type,
+    x, y,
+    buried: !!opts.buried,     // 埋藏：仅宝石发现器可探测
+    fake: !!opts.fake,
+    taken: false,
+    ...opts,
+  };
+}
+
+// ===== data/weapons.js =====
+// 武器数据表（按队伍特长设计四类）
+// dmg 伤害, range 射程(px), rof 每秒射击数, noise 暴露值(0-1),
+// ammo 弹容, silent 是否静音, kind: melee/ranged/trap/thrown
+const WEAPONS = {
+  // 近战
+  dagger: { id: 'dagger', name: '匕首', team: 'china', kind: 'melee', dmg: 28, range: 46, rof: 2.2, noise: 0.05, silent: true, desc: '静音高暴击' },
+  saber: { id: 'saber', name: '军刀', team: 'usa', kind: 'melee', dmg: 40, range: 50, rof: 1.6, noise: 0.25, silent: false, desc: '伤害高略响' },
+  // 远程
+  crossbow: { id: 'crossbow', name: '弩', team: 'china', kind: 'ranged', dmg: 34, range: 360, rof: 1.0, noise: 0.12, silent: true, ammo: 12, desc: '静音远程偷袭' },
+  blowdart: { id: 'blowdart', name: '吹箭', team: 'china', kind: 'ranged', dmg: 22, range: 280, rof: 1.4, noise: 0.04, silent: true, ammo: 20, desc: '极静音' },
+  pistol: { id: 'pistol', name: '手枪', team: 'usa', kind: 'ranged', dmg: 26, range: 380, rof: 3.5, noise: 0.6, silent: false, ammo: 18, desc: '高射速' },
+  rifle: { id: 'rifle', name: '步枪', team: 'usa', kind: 'ranged', dmg: 48, range: 520, rof: 2.0, noise: 0.85, silent: false, ammo: 30, desc: '高火力远程' },
+  // 陷阱（中国队长项，放置式）
+  trap_jaw: { id: 'trap_jaw', name: '捕兽夹', team: 'china', kind: 'trap', dmg: 55, range: 0, rof: 0, noise: 0, silent: true, desc: '踩中重创' },
+  trap_spike: { id: 'trap_spike', name: '地钉', team: 'china', kind: 'trap', dmg: 35, range: 0, rof: 0, noise: 0, silent: true, desc: '隐蔽地刺' },
+  // 投掷
+  grenade: { id: 'grenade', name: '手榴弹', team: 'usa', kind: 'thrown', dmg: 70, range: 260, rof: 0.5, noise: 0.9, silent: false, ammo: 3, desc: '范围爆炸' },
+  smoke: { id: 'smoke', name: '烟雾弹', team: 'china', kind: 'thrown', dmg: 0, range: 220, rof: 0.5, noise: 0.1, silent: true, ammo: 3, desc: '制造遮蔽' },
+};
+
+// 各队默认装备
+const TEAM_LOADOUT = {
+  china: ['dagger', 'crossbow', 'trap_jaw'],
+  usa: ['saber', 'rifle', 'pistol'],
+};
+
+// ===== data/characters.js =====
+// 角色档案：中国队 = 中国历史战斗英雄；美国队 = 漫威电影人物
+// 每个角色都有独立外观（肤色/发型/胡须/盔甲/徽记/武器）与自我特性（血量/移速/伤害/称号）
+// 字段说明：
+//   name      显示名（头顶标签）
+//   title     特性称号（HUD/简介用）
+//   skin      肤色
+//   hair      发色（null=光头）
+//   beard     是否有胡须
+//   beardColor 胡须颜色
+//   primary   盔甲/衣主色
+//   secondary 盔甲/衣暗色
+//   accent    点缀色（金/银/红）
+//   helmet    头盔风格 key（见 drawHumanoid 的 drawHead）
+//   emblem    胸前/头顶徽记文字
+//   weaponStyle 武器外观风格（见 drawPixelWeapon）
+//   curWeapon 出场默认武器索引（对应队伍装备）
+//   hpBonus   额外血量（仅我方英雄生效，敌方固定80以保持3次击杀）
+//   spdMul    移速倍率
+//   dmgMul    伤害倍率（仅敌方漫威生效，影响玩家；我方固定1以保3次击杀）
+
+const CHINA_HEROES = [
+  {
+    name: '关羽', title: '武圣·青龙偃月刀',
+    skin: '#e8a07a', hair: '#161616', beard: true, beardColor: '#161616',
+    primary: '#2e8b57', secondary: '#1c5e3a', accent: '#e8c84a',
+    helmet: 'guan', emblem: '关',
+    weaponStyle: 'glaive', curWeapon: 0,
+    hpBonus: 30, spdMul: 0.95, dmgMul: 1,
+  },
+  {
+    name: '岳飞', title: '精忠报国·银枪',
+    skin: '#eec19a', hair: '#161616', beard: true, beardColor: '#d9d2c4',
+    primary: '#cfd4da', secondary: '#9aa1ab', accent: '#e8c84a',
+    helmet: 'ming', emblem: '岳',
+    weaponStyle: 'spear', curWeapon: 1,
+    hpBonus: 10, spdMul: 1.0, dmgMul: 1,
+  },
+  {
+    name: '花木兰', title: '代父从军·疾风',
+    skin: '#f3c9a6', hair: '#161616', beard: false, beardColor: null,
+    primary: '#b5462f', secondary: '#7d2e1f', accent: '#e8c84a',
+    helmet: 'mulant', emblem: '木',
+    weaponStyle: 'bow', curWeapon: 1,
+    hpBonus: 0, spdMul: 1.18, dmgMul: 1,
+  },
+  {
+    name: '赵云', title: '一身是胆·龙胆亮银枪',
+    skin: '#eac19c', hair: '#161616', beard: false, beardColor: null,
+    primary: '#eef2f6', secondary: '#c2c9d2', accent: '#7fb3e0',
+    helmet: 'bai', emblem: '赵',
+    weaponStyle: 'spear', curWeapon: 1,
+    hpBonus: 5, spdMul: 1.12, dmgMul: 1,
+  },
+  {
+    name: '戚继光', title: '抗倭名将·鸳鸯阵',
+    skin: '#e0ad84', hair: '#161616', beard: true, beardColor: '#2a2a2a',
+    primary: '#3a6ea5', secondary: '#274b73', accent: '#e8c84a',
+    helmet: 'ming2', emblem: '戚',
+    weaponStyle: 'spear', curWeapon: 1,
+    hpBonus: 15, spdMul: 1.0, dmgMul: 1,
+  },
+];
+
+const USA_HEROES = [
+  {
+    name: '美国队长', title: '领袖·星盾',
+    skin: '#e8b890', hair: '#3a2a1a', beard: true, beardColor: '#3a2a1a',
+    primary: '#2a4d8f', secondary: '#1b3568', accent: '#e8c84a',
+    helmet: 'cap', emblem: '★',
+    weaponStyle: 'shield', curWeapon: 2,
+    hpBonus: 0, spdMul: 1.0, dmgMul: 1.1,
+  },
+  {
+    name: '钢铁侠', title: '天才·掌心炮',
+    skin: '#eabf95', hair: '#161616', beard: false, beardColor: null,
+    primary: '#c0392b', secondary: '#8a261d', accent: '#f1c40f',
+    helmet: 'ironman', emblem: 'MK',
+    weaponStyle: 'repulsor', curWeapon: 1,
+    hpBonus: 0, spdMul: 1.05, dmgMul: 1.1,
+  },
+  {
+    name: '雷神', title: '雷霆之神·姆乔尼尔',
+    skin: '#e9bd92', hair: '#d8b24a', beard: true, beardColor: '#d8b24a',
+    primary: '#9aa6b2', secondary: '#6f7884', accent: '#5ad1e6',
+    helmet: 'thor', emblem: '⚡',
+    weaponStyle: 'hammer', curWeapon: 0,
+    hpBonus: 0, spdMul: 1.0, dmgMul: 1.2,
+  },
+  {
+    name: '绿巨人', title: '无敌·浩克',
+    skin: '#5fae4e', hair: null, beard: false, beardColor: null,
+    primary: '#4f9e3f', secondary: '#3a7a2f', accent: '#2e6b27',
+    helmet: 'hulk', emblem: '',
+    weaponStyle: 'fist', curWeapon: 0,
+    hpBonus: 0, spdMul: 0.9, dmgMul: 1.25,
+  },
+  {
+    name: '黑寡妇', title: '间谍·双枪',
+    skin: '#ecc4a0', hair: '#8a1f1f', beard: false, beardColor: null,
+    primary: '#2b2f3a', secondary: '#1a1d24', accent: '#c0392b',
+    helmet: 'widow', emblem: '寡',
+    weaponStyle: 'dualpistol', curWeapon: 2,
+    hpBonus: 0, spdMul: 1.15, dmgMul: 1.0,
+  },
+];
+
+// ===== data/tasks.js =====
+// 任务模板（按难度分级，奖励金银铜）
+const TASK_TEMPLATES = [
+  { id: 'collect', diff: 'easy', desc: '采集 {n} 份资源（金/银/铜）', goal: { type: 'collect', n: 5 }, reward: { gold: 8, silver: 6, copper: 10 } },
+  { id: 'hunt', diff: 'easy', desc: '击杀 {n} 名敌方单位', goal: { type: 'kill', n: 2 }, reward: { gold: 6, silver: 8, copper: 6 } },
+  { id: 'gather_gem', diff: 'medium', desc: '收集 {n} 颗宝石', goal: { type: 'gem', n: 3 }, reward: { gold: 14, silver: 10, copper: 8 } },
+  { id: 'sniff', diff: 'medium', desc: '鉴定并举报 {n} 块假金', goal: { type: 'fake', n: 2 }, reward: { gold: 10, silver: 12, copper: 10 } },
+  { id: 'raid', diff: 'hard', desc: '摧毁敌方基地（造成 {n} 点破坏）', goal: { type: 'raid', n: 100 }, reward: { gold: 30, silver: 20, copper: 15 } },
+  { id: 'conquer', diff: 'hard', desc: '击杀 {n} 名敌方单位', goal: { type: 'kill', n: 6 }, reward: { gold: 24, silver: 18, copper: 12 } },
+];
+
+const DIFF_LABEL = { easy: '易', medium: '中', hard: '难' };
+
+// ===== engine/rng.js =====
+// 可复现随机数（mulberry32）
+function makeRNG(seed = Date.now()) {
+  let s = seed >>> 0;
+  function next() {
+    s |= 0;
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  return {
+    next,
+    range: (a, b) => a + next() * (b - a),
+    int: (a, b) => Math.floor(a + next() * (b - a + 1)),
+    pick: (arr) => arr[Math.floor(next() * arr.length)],
+    chance: (p) => next() < p,
+  };
+}
+
+// ===== engine/render.js =====
+// 通用 Canvas 绘制工具
+const Render = {
+  rect(ctx, x, y, w, h, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+  },
+  strokeRect(ctx, x, y, w, h, color, lw = 1) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.strokeRect(x, y, w, h);
+  },
+  circle(ctx, x, y, r, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  },
+  strokeCircle(ctx, x, y, r, color, lw = 1) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+  },
+  line(ctx, x1, y1, x2, y2, color, lw = 1) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  },
+  text(ctx, str, x, y, color = '#fff', size = 14, align = 'left') {
+    ctx.fillStyle = color;
+    ctx.font = `${size}px sans-serif`;
+    ctx.textAlign = align;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(str, x, y);
+  },
+  // 血条
+  healthBar(ctx, x, y, w, h, ratio, color = '#2ecc71') {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w * Math.max(0, Math.min(1, ratio)), h);
+  },
+};
+
+// ===== engine/collision.js =====
+// 碰撞与几何工具
+function dist(ax, ay, bx, by) {
+  return Math.hypot(ax - bx, ay - by);
+}
+
+function dist2(ax, ay, bx, by) {
+  const dx = ax - bx, dy = ay - by;
+  return dx * dx + dy * dy;
+}
+
+function clamp(v, lo, hi) {
+  return v < lo ? lo : v > hi ? hi : v;
+}
+
+// 圆-圆相交
+function circleHit(ax, ay, ar, bx, by, br) {
+  return dist2(ax, ay, bx, by) <= (ar + br) * (ar + br);
+}
+
+// 点是否在矩形内（矩形以 x,y,w,h 像素表示）
+function pointInRect(px, py, x, y, w, h) {
+  return px >= x && px <= x + w && py >= y && py <= y + h;
+}
+
+// 线段是否被树木遮挡（用于视线判定）：采样检测
+function lineBlocked(x1, y1, x2, y2, isBlockedAt) {
+  const steps = Math.ceil(dist(x1, y1, x2, y2) / 12);
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps;
+    if (isBlockedAt(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t)) return true;
+  }
+  return false;
+}
+
+function normalize(dx, dy) {
+  const l = Math.hypot(dx, dy) || 1;
+  return [dx / l, dy / l];
+}
+
+// ===== engine/input.js =====
+// 键鼠输入管理
+class Input {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.keys = new Set();
+    this.justPressed = new Set();
+    this.mouse = { x: 0, y: 0, down: false, justDown: false };
+    this._bind();
+  }
+  _bind() {
+    window.addEventListener('keydown', (e) => {
+      const k = e.key.toLowerCase();
+      if (!this.keys.has(k)) this.justPressed.add(k);
+      this.keys.add(k);
+      if ([' ', 'tab'].includes(k)) e.preventDefault();
+    });
+    window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
+    this.canvas.addEventListener('mousemove', (e) => {
+      const r = this.canvas.getBoundingClientRect();
+      this.mouse.x = e.clientX - r.left;
+      this.mouse.y = e.clientY - r.top;
+    });
+    this.canvas.addEventListener('mousedown', () => {
+      if (!this.mouse.down) this.mouse.justDown = true;
+      this.mouse.down = true;
+    });
+    window.addEventListener('mouseup', () => (this.mouse.down = false));
+  }
+  down(k) { return this.keys.has(k); }
+  pressed(k) { return this.justPressed.has(k); }
+  // 每帧末调用，清理单次状态
+  endFrame() {
+    this.justPressed.clear();
+    this.mouse.justDown = false;
+  }
+}
+
+// ===== engine/camera.js =====
+
+
+// 摄像机：跟随目标并裁剪到世界边界
+class Camera {
+  constructor(vw, vh) {
+    this.x = 0; this.y = 0;
+    this.vw = vw; this.vh = vh;
+  }
+  follow(tx, ty) {
+    this.x = clamp(tx - this.vw / 2, 0, Math.max(0, WORLD_W - this.vw));
+    this.y = clamp(ty - this.vh / 2, 0, Math.max(0, WORLD_H - this.vh));
+  }
+  // 世界坐标 -> 屏幕坐标
+  toScreen(wx, wy) {
+    return [wx - this.x, wy - this.y];
+  }
+  // 屏幕坐标 -> 世界坐标
+  toWorld(sx, sy) {
+    return [sx + this.x, sy + this.y];
+  }
+}
+
+// ===== engine/loop.js =====
+// 游戏主循环（requestAnimationFrame + dt 限制）
+function startLoop(update, render) {
+  let last = performance.now();
+  function frame(now) {
+    let dt = (now - last) / 1000;
+    last = now;
+    if (dt > 0.05) dt = 0.05; // 防止卡顿后大跳
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ===== world/tiles.js =====
+
+
+// 地形属性查询（基于网格）
+class World {
+  constructor(rng) {
+    this.rng = rng;
+    this.grid = [];
+    this.tunnels = new Set(); // "x,y" 中国队隐藏通道
+    this.generate();
+  }
+
+  generate() {
+    const { MAP_W: W, MAP_H: H } = { MAP_W: this.W(), MAP_H: this.H() };
+    this.grid = Array.from({ length: H }, () => new Array(W).fill(T.GROUND));
+
+    // 中央湖泊 + 河床
+    const lakeX = Math.floor(W * 0.5), lakeY = Math.floor(H * 0.5);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const d = Math.hypot(x - lakeX, (y - lakeY) * 1.4);
+        if (d < 4) this.grid[y][x] = T.WATER;
+        else if (d < 6) this.grid[y][x] = T.RIVERBED;
+      }
+    }
+
+    // 森林树木（基地周围稀疏，中部密集）
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (this.grid[y][x] !== T.GROUND) continue;
+        const nearBase =
+          (x < 16) || (x > W - 16) || this.inBase(x, y, 'china') || this.inBase(x, y, 'usa');
+        const density = nearBase ? 0.08 : 0.26;
+        if (this.rng.chance(density)) this.grid[y][x] = T.TREE;
+      }
+    }
+
+    // 岩石点缀
+    for (let i = 0; i < 40; i++) {
+      const x = this.rng.int(2, W - 3), y = this.rng.int(2, H - 3);
+      if (this.grid[y][x] === T.GROUND) this.grid[y][x] = T.ROCK;
+    }
+
+    // 基地区域铺设
+    this.paintBase('china', T.BASE_C);
+    this.paintBase('usa', T.BASE_U);
+
+    // 中国队地道（从基地蜿蜒通向中部，提供隐蔽通道）
+    this.carveTunnels();
+  }
+
+  W() { return Math.floor((this.grid[0] ? this.grid[0].length : 0)) || 64; }
+  H() { return this.grid.length || 44; }
+
+  paintBase(team, code) {
+    const b = BASE[team];
+    for (let y = b.ty; y < b.ty + b.th; y++) {
+      for (let x = b.tx; x < b.tx + b.tw; x++) {
+        if (y >= 0 && y < this.H() && x >= 0 && x < this.W()) this.grid[y][x] = code;
+      }
+    }
+  }
+
+  carveTunnels() {
+    const b = BASE.china;
+    let x = b.tx, y = Math.floor(b.ty + b.th / 2);
+    const targetX = Math.floor(this.W() * 0.62);
+    while (x > targetX) {
+      this.tunnels.add(`${x},${y}`);
+      // 蜿蜒
+      if (this.rng.chance(0.5)) y += this.rng.chance(0.5) ? 1 : -1;
+      y = Math.max(1, Math.min(this.H() - 2, y));
+      if (this.grid[y][x] === T.TREE) this.grid[y][x] = T.GROUND;
+      x--;
+    }
+  }
+
+  inBase(tx, ty, team) {
+    const b = BASE[team];
+    return tx >= b.tx && tx < b.tx + b.tw && ty >= b.ty && ty < b.ty + b.th;
+  }
+
+  tileAtWorld(wx, wy) {
+    const tx = Math.floor(wx / TILE), ty = Math.floor(wy / TILE);
+    if (tx < 0 || ty < 0 || tx >= this.W() || ty >= this.H()) return T.ROCK;
+    return this.grid[ty][tx];
+  }
+
+  isTunnelAt(wx, wy) {
+    const tx = Math.floor(wx / TILE), ty = Math.floor(wy / TILE);
+    return this.tunnels.has(`${tx},${ty}`);
+  }
+
+  baseAt(wx, wy) {
+    const tx = Math.floor(wx / TILE), ty = Math.floor(wy / TILE);
+    if (this.inBase(tx, ty, 'china')) return 'china';
+    if (this.inBase(tx, ty, 'usa')) return 'usa';
+    return null;
+  }
+
+  // 移动阻挡：树木/岩石/水域
+  blocksMove(wx, wy) {
+    const c = this.tileAtWorld(wx, wy);
+    return c === T.TREE || c === T.ROCK || c === T.WATER;
+  }
+
+  // 视线阻挡：仅树木
+  blocksSight(wx, wy) {
+    return this.tileAtWorld(wx, wy) === T.TREE;
+  }
+
+  // 视线是否被树木遮挡
+  lineBlockedSight(x1, y1, x2, y2) {
+    return lineBlocked(x1, y1, x2, y2, (x, y) => this.blocksSight(x, y));
+  }
+
+  // 武器击倒树木：将树木格子变为平地
+  destroyTreeAt(wx, wy) {
+    const tx = Math.floor(wx / TILE);
+    const ty = Math.floor(wy / TILE);
+    if (tx >= 0 && tx < this.W() && ty >= 0 && ty < this.H() && this.grid[ty][tx] === T.TREE) {
+      this.grid[ty][tx] = T.GROUND;
+      return true;
+    }
+    return false;
+  }
+}
+
+// ===== world/mapgen.js =====
+
+
+// 工厂：创建世界（保留文件以匹配模块结构）
+function createWorld(seed) {
+  return new World(makeRNG(seed));
+}
+
+// ===== world/seasons.js =====
+
+// 四季状态机：环境效果 + 季节切换回调
+class SeasonManager {
+  constructor(onChange) {
+    this.index = 0;
+    this.timer = 0;
+    this.onChange = onChange; // (season, prev) => void
+  }
+  get current() { return SEASONS[this.index]; }
+  get name() {
+    return { spring: '春', summer: '夏', autumn: '秋', winter: '冬' }[this.current];
+  }
+  update(dt) {
+    this.timer += dt;
+    if (this.timer >= SEASON_DURATION) {
+      this.timer = 0;
+      const prev = this.current;
+      this.index = (this.index + 1) % SEASONS.length;
+      if (this.onChange) this.onChange(this.current, prev);
+    }
+  }
+  // 环境因子
+  env() {
+    switch (this.current) {
+      case 'spring': return { detectMult: 0.95, speedMult: 1.0, concealBonus: 0.18, waterActive: false, snow: false, leaf: false };
+      case 'summer': return { detectMult: 1.0, speedMult: 1.0, concealBonus: 0.05, waterActive: true, snow: false, leaf: false };
+      case 'autumn': return { detectMult: 1.15, speedMult: 1.0, concealBonus: 0.0, waterActive: false, snow: false, leaf: true };
+      case 'winter': return { detectMult: 0.9, speedMult: 0.8, concealBonus: 0.22, waterActive: false, snow: true, leaf: false };
+      default: return { detectMult: 1, speedMult: 1, concealBonus: 0, waterActive: false, snow: false, leaf: false };
+    }
+  }
+}
+
+// ===== systems/teams.js =====
+
+// 中美两队特性
+const TEAMS = {
+  china: {
+    name: '中国队', color: COLORS.china, base: 'china',
+    traits: ['隐蔽', '陷阱', '灵活转移'],
+    speedMult: 1.05, fireMult: 0.9, conceal: 0.2, detectMult: 0.9,
+    desc: '出生点森林东，基地较大、有地道与隐藏通道，防御弱但灵活。',
+  },
+  usa: {
+    name: '美国队', color: COLORS.usa, base: 'usa',
+    traits: ['火力', '速度', '资源多'],
+    speedMult: 1.15, fireMult: 1.2, conceal: 0.0, detectMult: 1.1,
+    desc: '出生点森林西，基地较小、资源与设施更多，但更易被发现攻击。',
+  },
+};
+
+// ===== systems/equipment.js =====
+
+// 装备系统：眼科技眼镜（付费/电量/宝石充电）+ 宝石发现器（免费/ABC精度）
+class Equipment {
+  constructor() {
+    this.glassesUnlocked = false;
+    this.glassesBattery = 0;       // 0-100
+    this.detectorLevel = 'A';      // A/B/C
+    this.detectorActive = false;
+    this.detectorExposure = 0;     // 开启时累积的暴露信号
+  }
+
+  unlockGlasses(inv) {
+    if (this.glassesUnlocked) return { ok: false, msg: '已解锁' };
+    const cost = 30;
+    if (inv.gold < cost) return { ok: false, msg: `需要 ${cost} 金` };
+    inv.gold -= cost;
+    this.glassesUnlocked = true;
+    this.glassesBattery = 100;
+    return { ok: true, msg: '眼科技眼镜已租用（电量100）' };
+  }
+
+  chargeGlasses(inv) {
+    if (!this.glassesUnlocked) return { ok: false, msg: '未解锁眼镜' };
+    if (inv.gems <= 0) return { ok: false, msg: '无宝石可充电' };
+    if (this.glassesBattery >= 100) return { ok: false, msg: '电量已满' };
+    inv.gems -= 1;
+    this.glassesBattery = 100;
+    return { ok: true, msg: '用宝石充满电量' };
+  }
+
+  // 使用眼镜鉴定：消耗电量，返回是否可用
+  canIdentify() {
+    return this.glassesUnlocked && this.glassesBattery > 0;
+  }
+  drainIdentify() {
+    this.glassesBattery = Math.max(0, this.glassesBattery - 12);
+  }
+
+  upgradeDetector(inv) {
+    const cost = { A: 20, B: 40 };
+    const next = { A: 'B', B: 'C' };
+    if (this.detectorLevel === 'C') return { ok: false, msg: '已是最高精度C' };
+    const c = cost[this.detectorLevel];
+    if (inv.gold < c) return { ok: false, msg: `需要 ${c} 金` };
+    inv.gold -= c;
+    this.detectorLevel = next[this.detectorLevel];
+    return { ok: true, msg: `宝石发现器升级至 ${this.detectorLevel} 级` };
+  }
+
+  toggleDetector() { this.detectorActive = !this.detectorActive; }
+  detectorRadius() { return GEM_DETECT_RADIUS[this.detectorLevel]; }
+
+  // 每帧更新：开启发现器产生暴露信号（被敌人察觉风险）
+  update(dt) {
+    if (this.detectorActive) {
+      this.detectorExposure += dt * 0.5;
+    } else {
+      this.detectorExposure = Math.max(0, this.detectorExposure - dt);
+    }
+  }
+}
+
+// ===== systems/resources.js =====
+
+// 资源与背包：金银铜 + 宝石 + 可疑金（需鉴定）+ 已确认假金
+class Inventory {
+  constructor() {
+    this.gold = 0;
+    this.silver = 0;
+    this.copper = 0;
+    this.gems = 0;       // 用于给眼镜充电
+    this.suspect = [];   // 未鉴定"金"，元素为 boolean(是否假)
+    this.fakeGold = 0;   // 已确认假金
+  }
+
+  addResource(type, n = 1) {
+    if (type === 'gold') this.gold += n;
+    else if (type === 'silver') this.silver += n;
+    else if (type === 'copper') this.copper += n;
+    else if (type === 'gem') this.gems += n;
+  }
+
+  // 捡到"金/假金"均进入可疑池，需眼镜鉴定
+  pickSuspect(isFake) { this.suspect.push(isFake); }
+
+  canAfford(g, s, c) {
+    return this.gold >= g && this.silver >= s && this.copper >= c;
+  }
+  spend(g, s, c) {
+    this.gold -= g; this.silver -= s; this.copper -= c;
+  }
+
+  // 用眼镜鉴定全部可疑金；返回 {real, fake}
+  identifyAll(equipment, reputation) {
+    if (!equipment.glassesUnlocked) return { ok: false, msg: '眼镜未配发（按 B 商店配发）' };
+    if (equipment.glassesBattery <= 0) return { ok: false, msg: '眼镜没电！按 B 商店用宝石充电' };
+    if (this.suspect.length === 0) return { ok: false, msg: '暂无可鉴定的可疑金' };
+    let real = 0, fake = 0;
+    for (const f of this.suspect) {
+      if (f) { this.fakeGold++; fake++; } else { this.gold += 10; real++; }
+    }
+    this.suspect.length = 0;
+    equipment.drainIdentify();
+    if (fake > 0) reputation.gain(fake * REP_PER_FAKEGOLD);
+    return { ok: true, msg: `鉴定完成：真金${real} 假金${fake}（信誉+${fake * REP_PER_FAKEGOLD}）` };
+  }
+
+  total() { return this.gold + this.silver + this.copper; }
+}
+
+// ===== systems/reputation.js =====
+// 信誉度：识破假金获得；达阈值可向"老板"换取购买折扣
+class Reputation {
+  constructor() { this.value = 0; }
+  gain(n) { this.value += n; }
+  // 折扣倍率：信誉越高越便宜（最低 0.6）
+  discount() {
+    if (this.value >= 60) return 0.6;
+    if (this.value >= 30) return 0.75;
+    if (this.value >= 10) return 0.9;
+    return 1.0;
+  }
+  rank() {
+    if (this.value >= 60) return '信誉卓越';
+    if (this.value >= 30) return '信誉良好';
+    if (this.value >= 10) return '初获信任';
+    return '无名小卒';
+  }
+}
+
+// ===== systems/weapons.js =====
+
+
+const PROJ_SPEED = { bullet: 720, grenade: 400, smoke: 340 };
+
+function createWeaponState(id) {
+  const def = WEAPONS[id];
+  return {
+    ...def,
+    ammoMax: def.ammo || 0,
+    ammo: def.ammo || 0,
+    cd: 0,
+  };
+}
+
+class Projectile {
+  constructor(opts) {
+    Object.assign(this, opts);
+    this.dead = false;
+    this.trail = [];
+    this.px = opts.x; this.py = opts.y;
+  }
+}
+
+// 开火：根据当前武器类型产生子弹/抛投物，或近战即时命中
+// 返回 {fired, noise}（noise 用于敌人察觉）
+function fireWeapon(shooter, tx, ty, ctx) {
+  const w = shooter.weapons[shooter.curWeapon];
+  if (!w || w.cd > 0) return { fired: false };
+  const dx = tx - shooter.x, dy = ty - shooter.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = dx / len, ny = dy / len;
+  shooter.facing = Math.atan2(dy, dx);
+
+  if (w.kind === 'melee') {
+    w.cd = 1 / w.rof;
+    shooter.muzzle = 0.07;
+    const hit = meleeHit(shooter, w, ctx);
+    return { fired: true, noise: w.noise, hit };
+  }
+
+  if (w.kind === 'trap') return { fired: false }; // 陷阱走专门放置逻辑
+
+  if (w.ammo <= 0) return { fired: false, empty: true };
+  w.ammo -= 1;
+  w.cd = 1 / w.rof;
+
+  const type = w.kind === 'thrown' ? (w.id === 'grenade' ? 'grenade' : 'smoke') : 'bullet';
+  const proj = new Projectile({
+    x: shooter.x + nx * (shooter.radius + 4),
+    y: shooter.y + ny * (shooter.radius + 4),
+    vx: nx * PROJ_SPEED[type],
+    vy: ny * PROJ_SPEED[type],
+    dmg: w.dmg * (shooter.dmgMul || 1), team: shooter.team, silent: w.silent,
+    noise: w.noise, kind: type, life: type === 'bullet' ? 0.9 : 1.6,
+    range: w.range, traveled: 0,
+  });
+  ctx.projectiles.push(proj);
+  shooter.muzzle = 0.09;
+  return { fired: true, noise: w.noise };
+}
+
+function meleeHit(shooter, w, ctx) {
+  let hitSomething = false;
+  // 近战劈砍树木（朝向方向前方一格范围）
+  const chopX = shooter.x + Math.cos(shooter.facing) * (w.range + TILE * 0.6);
+  const chopY = shooter.y + Math.sin(shooter.facing) * (w.range + TILE * 0.6);
+  if (ctx.world.tileAtWorld(chopX, chopY) === T.TREE) {
+    ctx.world.destroyTreeAt(chopX, chopY);
+    ctx.game.addTreeFallFX(chopX, chopY);
+    hitSomething = true;
+  }
+  for (const u of ctx.units) {
+    if (!u.alive || u.team === shooter.team) continue;
+    const d = Math.hypot(u.x - shooter.x, u.y - shooter.y);
+    if (d <= w.range + u.radius) {
+      // 朝向前方扇形
+      const ang = Math.atan2(u.y - shooter.y, u.x - shooter.x);
+      let diff = Math.abs(ang - shooter.facing);
+      if (diff > Math.PI) diff = 2 * Math.PI - diff;
+      if (diff < 1.1) {
+        ctx.combat.damage(u, w.dmg * (shooter.dmgMul || 1));
+        hitSomething = true;
+      }
+    }
+  }
+  return hitSomething;
+}
+
+function updateProjectiles(ctx, dt) {
+  for (const p of ctx.projectiles) {
+    p.trail.push({ x: p.x, y: p.y });
+    if (p.trail.length > 8) p.trail.shift();
+    const step = Math.hypot(p.vx, p.vy) * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.traveled += step;
+    p.life -= dt;
+    if (p.life <= 0 || p.traveled >= p.range) {
+      detonate(p, ctx);
+      p.dead = true;
+      continue;
+    }
+    // 撞树/石/水 —— 树木可被武器击倒
+    if (ctx.world.blocksMove(p.x, p.y)) {
+      const tileT = ctx.world.tileAtWorld(p.x, p.y);
+      if (tileT === T.TREE) {
+        // 武器击倒树木
+        ctx.world.destroyTreeAt(p.x, p.y);
+        ctx.game.addTreeFallFX(p.x, p.y);
+        detonate(p, ctx);
+        p.dead = true;
+        continue;
+      }
+      // 岩石和水仍然直接阻挡
+      detonate(p, ctx);
+      p.dead = true;
+      continue;
+    }
+    // 命中单位
+    for (const u of ctx.units) {
+      if (!u.alive || u.team === p.team) continue;
+      if (Math.hypot(u.x - p.x, u.y - p.y) <= u.radius + 4) {
+        if (p.kind === 'bullet') {
+          ctx.combat.damage(u, p.dmg);
+          p.dead = true;
+        } else {
+          detonate(p, ctx);
+          p.dead = true;
+        }
+        break;
+      }
+    }
+  }
+  for (let i = ctx.projectiles.length - 1; i >= 0; i--) {
+    if (ctx.projectiles[i].dead) ctx.projectiles.splice(i, 1);
+  }
+}
+
+function detonate(p, ctx) {
+  if (p.kind === 'grenade') {
+    ctx.combat.explode(p.x, p.y, 70, p.dmg, p.team, ctx.units, ctx.world, ctx.game);
+  } else if (p.kind === 'smoke') {
+    ctx.smokes.push({ x: p.x, y: p.y, r: 90, life: 6 });
+  }
+}
+
+// ===== systems/combat.js =====
+// 战斗结算：伤害、死亡、范围爆炸、基地破坏
+
+class Combat {
+  constructor(game) { this.game = game; }
+
+  damage(u, dmg) {
+    if (!u.alive) return;
+    // 新手友好：敌人对玩家的伤害打六折
+    if (u.isPlayer) dmg = Math.ceil(dmg * 0.6);
+    u.hp -= dmg;
+    if (u.hp <= 0) {
+      u.hp = 0; u.alive = false;
+      this.game.onUnitKilled(u);
+    }
+  }
+
+  explode(x, y, r, dmg, team, units, world, game) {
+    for (const u of units) {
+      if (!u.alive || u.team === team) continue;
+      if (Math.hypot(u.x - x, u.y - y) <= r + u.radius) {
+        this.damage(u, dmg);
+      }
+    }
+    // 爆炸范围内树木也被炸倒
+    if (world) {
+      const tiles = Math.ceil(r / TILE);
+      for (let dy = -tiles; dy <= tiles; dy++) {
+        for (let dx = -tiles; dx <= tiles; dx++) {
+          const tx = Math.floor(x / TILE) + dx, ty = Math.floor(y / TILE) + dy;
+          if (tx >= 0 && tx < world.W() && ty >= 0 && ty < world.H()) {
+            if (world.grid[ty][tx] === T.TREE && Math.hypot(dx * TILE, dy * TILE) <= r) {
+              world.grid[ty][tx] = T.GROUND;
+              if (game) game.addTreeFallFX(tx * TILE + TILE / 2, ty * TILE + TILE / 2);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 对敌方基地造成伤害（玩家攻击敌队基地）
+  damageBase(baseTeam, dmg) {
+    const base = this.game.bases[baseTeam];
+    if (base.hp <= 0) return;
+    base.hp = Math.max(0, base.hp - dmg);
+    this.game.stats.raid += dmg;
+    if (base.hp <= 0) this.game.onBaseDestroyed(baseTeam);
+  }
+}
+
+// ===== systems/tasks.js =====
+
+let _tid = 1;
+
+// 任务系统：接取 -> 事件推进 -> 完成结算奖励
+class TaskManager {
+  constructor() {
+    this.tasks = []; // {id, def, progress, done}
+  }
+
+  addTask(def) {
+    if (this.tasks.some((t) => t.def.id === def.id && !t.done)) return null;
+    const t = { id: _tid++, def, progress: 0, done: false };
+    this.tasks.push(t);
+    return t;
+  }
+
+  randomTask(rng) {
+    const def = rng.pick(TASK_TEMPLATES);
+    return this.addTask(def);
+  }
+
+  // 游戏事件推进进度
+  event(type, n = 1) {
+    for (const t of this.tasks) {
+      if (t.done) continue;
+      if (t.def.goal.type === type) {
+        t.progress = Math.min(t.def.goal.n, t.progress + n);
+      }
+    }
+  }
+
+  // 每帧检查完成并发奖
+  update(inv, rep) {
+    const msgs = [];
+    for (const t of this.tasks) {
+      if (!t.done && t.progress >= t.def.goal.n) {
+        t.done = true;
+        const r = t.def.reward;
+        inv.gold += r.gold; inv.silver += r.silver; inv.copper += r.copper;
+        msgs.push(`任务完成【${t.def.desc.replace('{n}', t.def.goal.n)}】 奖励 金${r.gold}/银${r.silver}/铜${r.copper}`);
+      }
+    }
+    return msgs;
+  }
+
+  activeList() {
+    return this.tasks.filter((t) => !t.done).map((t) => ({
+      desc: t.def.desc.replace('{n}', t.def.goal.n),
+      diff: DIFF_LABEL[t.def.diff],
+      progress: `${t.progress}/${t.def.goal.n}`,
+    }));
+  }
+}
+
+// ===== entities/unit.js =====
+
+
+
+class Unit {
+  constructor(team, x, y, isPlayer = false) {
+    this.team = team;
+    this.x = x; this.y = y;
+    this.isPlayer = isPlayer;
+    this.radius = 14;
+    this.maxHp = 100; this.hp = 100;
+    this.vx = 0; this.vy = 0;
+    this.facing = 0;
+    this.alive = true;
+    this.noise = 0;          // 当前发出的噪音（0-1+）
+    this.concealment = 0;    // 隐蔽系数 0-1
+    this.water = MAX_WATER;
+    this.hasWaterGem = false;
+    this.hasSnowmobile = false;
+    this.weapons = TEAM_LOADOUT[team].map(createWeaponState);
+    this.curWeapon = 0;
+    this.muzzle = 0;        // 枪口火光计时
+    this.weaponSwitchT = 0; // 切换武器闪光计时
+    this.traps = team === 'china' ? 3 : 0;
+    this.ai = { state: 'patrol', timer: 0, target: null, homeX: x, homeY: y, lost: 0 };
+    this.color = team === 'china' ? '#2e8b57' : '#c0392b';
+    this.name = '';       // 用于队友/敌人标识
+    this.walkPhase = 0;   // 行走动画相位
+    this.profile = null;  // 外观/特性档案（英雄/漫威角色）
+    this.hpBonus = 0;     // 额外血量
+    this.spdMul = 1;      // 移速倍率（特性）
+    this.dmgMul = 1;      // 伤害倍率（特性，仅敌方生效）
+  }
+
+  speedMul() {
+    let m = this.spdMul || 1;
+    if (this.hasSnowmobile) m *= 1.4;
+    return m;
+  }
+}
+
+// ===== entities/item.js =====
+
+
+function randomGround(world, rng) {
+  for (let i = 0; i < 50; i++) {
+    const x = rng.int(1, world.W() - 2), y = rng.int(1, world.H() - 2);
+    const c = world.grid[y][x];
+    if (c === T.GROUND || c === T.RIVERBED) {
+      return [(x + 0.5) * TILE, (y + 0.5) * TILE];
+    }
+  }
+  return [(world.W() / 2) * TILE, (world.H() / 2) * TILE];
+}
+
+// 初始散布资源、埋藏宝石、真假金
+function populateItems(world, rng) {
+  const items = [];
+  const types = ['gold', 'silver', 'copper'];
+  for (let i = 0; i < 45; i++) {
+    const [x, y] = randomGround(world, rng);
+    items.push(makeItem(rng.pick(types), x, y));
+  }
+  // 埋藏宝石（需宝石发现器）
+  for (let i = 0; i < 14; i++) {
+    const [x, y] = randomGround(world, rng);
+    items.push(makeItem('gem', x, y, { buried: true }));
+  }
+  // 真假金混入
+  for (let i = 0; i < 10; i++) {
+    const [x, y] = randomGround(world, rng);
+    items.push(makeItem('gold', x, y));
+  }
+  for (let i = 0; i < 8; i++) {
+    const [x, y] = randomGround(world, rng);
+    items.push(makeItem('fakeGold', x, y));
+  }
+  return items;
+}
+
+// 季节宝物刷新
+function spawnSeasonTreasure(season, world, rng, items) {
+  const [x, y] = randomGround(world, rng);
+  if (season === 'summer') items.push(makeItem('waterGem', x, y));
+  else if (season === 'winter') items.push(makeItem('snowmobile', x, y));
+}
+
+// ===== entities/trap.js =====
+
+// 陷阱实体（放置式，踩中触发）
+function makeTrap(team, x, y) {
+  const def = team === 'china' ? WEAPONS.trap_jaw : WEAPONS.trap_spike;
+  return {
+    team, x, y,
+    dmg: def.dmg,
+    radius: 18,
+    armed: true,
+    color: team === 'china' ? '#caa' : '#a55',
+  };
+}
+
+// ===== entities/player.js =====
+
+
+function inSmoke(game, x, y) {
+  for (const s of game.smokes) {
+    if (Math.hypot(s.x - x, s.y - y) <= s.r) return true;
+  }
+  return false;
+}
+function nearWater(world, x, y) {
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (world.grid[ty + dy] && world.grid[ty + dy][tx + dx] === 3) return true;
+    }
+  }
+  return false;
+}
+
+function updatePlayer(game, dt) {
+  const p = game.player;
+  if (!p.alive) return;
+  const input = game.input, cam = game.camera, world = game.world;
+  const env = game.season.env();
+  const cfg = game.teamCfg(p.team);
+
+  // 移动输入
+  let mx = 0, my = 0;
+  if (input.down('w') || input.down('arrowup')) my -= 1;
+  if (input.down('s') || input.down('arrowdown')) my += 1;
+  if (input.down('a') || input.down('arrowleft')) mx -= 1;
+  if (input.down('d') || input.down('arrowright')) mx += 1;
+  const moving = mx || my;
+  if (moving) { const l = Math.hypot(mx, my); mx /= l; my /= l; }
+
+  // 速度（季节/水源/队伍/雪地摩托）
+  let speed = PLAYER_BASE_SPEED * p.speedMul() * cfg.speedMult;
+  if (env.snow) speed *= 0.8;
+  if (env.waterActive && p.water <= 0 && !p.hasWaterGem) speed *= 0.55;
+  if (mx && !world.blocksMove(p.x + mx * speed * dt, p.y)) p.x += mx * speed * dt;
+  if (my && !world.blocksMove(p.x, p.y + my * speed * dt)) p.y += my * speed * dt;
+
+  // 朝向鼠标
+  const [wx, wy] = cam.toWorld(input.mouse.x, input.mouse.y);
+  p.facing = Math.atan2(wy - p.y, wx - p.x);
+
+  // 噪音与隐蔽
+  p.noise = moving ? 0.3 : 0.05;
+  if (env.leaf) p.noise += 0.25;
+  if (game.equipment.detectorActive) p.noise += Math.min(0.6, game.equipment.detectorExposure * 0.2);
+  p.concealment = cfg.conceal + env.concealBonus;
+  if (world.isTunnelAt(p.x, p.y)) p.concealment += 0.3;
+  if (inSmoke(game, p.x, p.y)) p.concealment += 0.4;
+  p.concealment = Math.min(0.95, p.concealment);
+
+  // 水源（夏季）
+  if (env.waterActive) {
+    if (p.hasWaterGem) p.water = MAX_WATER;
+    else {
+      p.water -= WATER_DRAIN * dt;
+      if (nearWater(world, p.x, p.y)) p.water = Math.min(MAX_WATER, p.water + WATER_DRAIN * 3 * dt);
+      p.water = Math.max(0, p.water);
+    }
+  } else p.water = MAX_WATER;
+
+  // 武器冷却
+  for (const w of p.weapons) if (w.cd > 0) w.cd -= dt;
+  if (p._emptyT > 0) p._emptyT -= dt;
+
+  // 开火 / 放陷阱
+  const w = p.weapons[p.curWeapon];
+  if (input.mouse.down && w) {
+    if (w.kind === 'trap') {
+      if (input.mouse.justDown) game.placeTrap(p);
+    } else {
+      const r = fireWeapon(p, wx, wy, game.combatCtx());
+      if (r.fired && r.noise) game.alertNearby(p, r.noise);
+      if (r.empty && (p._emptyT || 0) <= 0) { game.toast('⌚ 弹药耗尽！按 B 进商店补给'); p._emptyT = 2.5; }
+    }
+  }
+
+  // 切换武器
+  for (let i = 0; i < p.weapons.length; i++) {
+    if (input.pressed(String(i + 1)) && p.curWeapon !== i) {
+      p.curWeapon = i;
+      p.weaponSwitchT = 0.5;
+      game.toast(`切换武器：${p.weapons[i].name}`);
+    }
+  }
+  // 放陷阱（空格）
+  if (input.pressed(' ')) game.placeTrap(p);
+
+  // 装备快捷键
+  if (input.pressed('q')) game.toggleDetector();
+  if (input.pressed('r')) game.identify();
+  if (input.pressed('e')) game.reportFake();
+  if (input.pressed('b')) game.toggleShop();
+}
+
+// ===== entities/enemyAI.js =====
+
+
+
+
+function pickRanged(e) {
+  const i = e.weapons.findIndex((w) => w.kind === 'ranged');
+  return i >= 0 ? i : e.curWeapon;
+}
+function pickMelee(e) {
+  const i = e.weapons.findIndex((w) => w.kind === 'melee');
+  return i >= 0 ? i : e.curWeapon;
+}
+
+
+
+
+function pickRanged(e) {
+  const i = e.weapons.findIndex((w) => w.kind === 'ranged');
+  return i >= 0 ? i : e.curWeapon;
+}
+function pickMelee(e) {
+  const i = e.weapons.findIndex((w) => w.kind === 'melee');
+  return i >= 0 ? i : e.curWeapon;
+}
+
+// 敌人是否察觉目标（季节/隐蔽/噪音/视线综合）
+function canSee(game, e, target) {
+  const env = game.season.env();
+  const cfg = game.teamCfg(e.team);
+  let range = DETECT_BASE * env.detectMult * cfg.detectMult * (1 + target.noise * 0.8);
+  const d = Math.hypot(target.x - e.x, target.y - e.y);
+  if (d > range) return false;
+  if (inSmoke(game, target.x, target.y)) return false;
+  const concealFactor = 1 - target.concealment * (1 - d / range) * 0.9;
+  if (game.rng.next() > concealFactor) return false;
+  if (game.world.lineBlockedSight(e.x, e.y, target.x, target.y)) return false;
+  return true;
+}
+
+// 在敌方视野内挑选最近的我方单位（玩家或队友）作为目标
+function pickTarget(game, e) {
+  let best = null, bestD = Infinity;
+  const foes = [game.player, ...game.allies];
+  for (const t of foes) {
+    if (!t || !t.alive) continue;
+    if (!canSee(game, e, t)) continue;
+    const d = Math.hypot(t.x - e.x, t.y - e.y);
+    if (d < bestD) { bestD = d; best = t; }
+  }
+  return best;
+}
+
+function updateEnemy(game, e, dt) {
+  if (!e.alive) return;
+  const env = game.season.env();
+  const cfg = game.teamCfg(e.team);
+  const player = game.player;
+  const ai = e.ai;
+  const sees = pickTarget(game, e);
+
+  if (sees) { ai.state = 'chase'; ai.target = sees; ai.lost = 0; }
+  else if (ai.state === 'chase') { ai.lost += dt; if (ai.lost > 3) ai.state = 'patrol'; }
+
+  for (const w of e.weapons) if (w.cd > 0) w.cd -= dt;
+
+  let tx, ty;
+  if (ai.state === 'chase' && ai.target && ai.target.alive) {
+    tx = ai.target.x; ty = ai.target.y;
+  } else if (ai.raider && game.bases[player.team].hp > 0) {
+    const b = BASE[player.team];
+    tx = (b.tx + b.tw / 2) * TILE; ty = (b.ty + b.th / 2) * TILE;
+  } else {
+    ai.timer -= dt;
+    if (ai.timer <= 0) {
+      ai.timer = game.rng.range(1.5, 3.5);
+      ai.wx = ai.homeX + game.rng.range(-130, 130);
+      ai.wy = ai.homeY + game.rng.range(-130, 130);
+    }
+    tx = ai.wx ?? e.x; ty = ai.wy ?? e.y;
+  }
+
+  const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy);
+  let speed = ENEMY_BASE_SPEED * cfg.speedMult * (env.snow ? 0.8 : 1);
+  if (d > 4) {
+    const nx = dx / d, ny = dy / d;
+    if (!game.world.blocksMove(e.x + nx * speed * dt, e.y)) e.x += nx * speed * dt;
+    if (!game.world.blocksMove(e.x, e.y + ny * speed * dt)) e.y += ny * speed * dt;
+    e.facing = Math.atan2(dy, dx);
+  }
+
+  e.noise = ai.state === 'chase' ? 0.4 : 0.1;
+  if (env.leaf) e.noise += 0.2;
+  e.concealment = Math.min(0.95, cfg.conceal + env.concealBonus
+    + (game.world.isTunnelAt(e.x, e.y) ? 0.3 : 0) + (inSmoke(game, e.x, e.y) ? 0.4 : 0));
+
+  // 攻击
+  if (ai.state === 'chase' && ai.target && ai.target.alive) {
+    const w = e.weapons[e.curWeapon];
+    const dist = Math.hypot(ai.target.x - e.x, ai.target.y - e.y);
+    if (w.kind === 'melee' && dist > w.range) e.curWeapon = pickRanged(e);
+    else if (w.kind !== 'melee' && dist <= w.range * 0.5 && hasMelee(e)) e.curWeapon = pickMelee(e);
+    const cw = e.weapons[e.curWeapon];
+    if (dist <= (cw.range || 60) && cw.cd <= 0) {
+      const r = fireWeapon(e, ai.target.x, ai.target.y, game.combatCtx());
+      if (r.fired && r.noise) game.alertNearby(e, r.noise);
+    }
+  }
+
+  // 美国袭击者破坏玩家基地
+  if (ai.raider && game.bases[player.team].hp > 0) {
+    const b = BASE[player.team];
+    const cx = (b.tx + b.tw / 2) * TILE, cy = (b.ty + b.th / 2) * TILE;
+    if (Math.hypot(e.x - cx, e.y - cy) < (b.tw * TILE) / 2) {
+      game.combat.damageBase(player.team, 3.5 * dt); // 原8*dt，降低一半
+    }
+  }
+
+  // 中国队布陷阱
+  if (e.team === 'china' && e.traps > 0 && game.rng.chance(0.002)) game.placeTrap(e);
+}
+
+function hasMelee(e) { return e.weapons.some((w) => w.kind === 'melee'); }
+
+// ===== entities/allyAI.js =====
+
+
+
+function pickRanged(u) {
+  const i = u.weapons.findIndex((w) => w.kind === 'ranged');
+  return i >= 0 ? i : u.curWeapon;
+}
+
+// 队友 AI：发现敌人则迎击，否则跟随玩家
+function updateAlly(game, a, dt) {
+  if (!a.alive) return;
+  const env = game.season.env();
+  const cfg = game.teamCfg(a.team);
+  const player = game.player;
+  const ai = a.ai;
+
+  // 寻找视野内最近的敌人
+  let target = null, bestD = Infinity;
+  for (const e of game.enemies) {
+    if (!e.alive) continue;
+    if (!canSee(game, a, e)) continue;
+    const d = Math.hypot(e.x - a.x, e.y - a.y);
+    if (d < bestD) { bestD = d; target = e; }
+  }
+  ai.state = target ? 'chase' : 'follow';
+
+  for (const w of a.weapons) if (w.cd > 0) w.cd -= dt;
+  if (a.muzzle > 0) a.muzzle -= dt;
+  if (a.weaponSwitchT > 0) a.weaponSwitchT -= dt;
+
+  let tx, ty;
+  if (target) {
+    tx = target.x; ty = target.y;
+  } else {
+    const dpx = player.x - a.x, dpy = player.y - a.y;
+    const dp = Math.hypot(dpx, dpy);
+    if (dp > 80) { tx = player.x; ty = player.y; }   // 离玩家太远 → 跟随
+    else {
+      ai.timer -= dt;
+      if (ai.timer <= 0) {
+        ai.timer = 1.5 + Math.random() * 1.5;
+        ai.wx = a.x + (Math.random() * 130 - 65);
+        ai.wy = a.y + (Math.random() * 130 - 65);
+      }
+      tx = ai.wx ?? a.x; ty = ai.wy ?? a.y;
+    }
+  }
+
+  const dx = tx - a.x, dy = ty - a.y, d = Math.hypot(dx, dy);
+  let speed = ENEMY_BASE_SPEED * cfg.speedMult * (env.snow ? 0.85 : 1) * 0.95;
+  if (d > 4) {
+    const nx = dx / d, ny = dy / d;
+    if (!game.world.blocksMove(a.x + nx * speed * dt, a.y)) a.x += nx * speed * dt;
+    if (!game.world.blocksMove(a.x, a.y + ny * speed * dt)) a.y += ny * speed * dt;
+    a.facing = Math.atan2(dy, dx);
+  }
+  a.walkPhase += (d > 4 ? dt * 10 : 0);
+
+  a.noise = ai.state === 'chase' ? 0.35 : 0.08;
+  if (env.leaf) a.noise += 0.15;
+  a.concealment = Math.min(0.95, cfg.conceal + env.concealBonus
+    + (game.world.isTunnelAt(a.x, a.y) ? 0.3 : 0) + (inSmokeSafe(game, a.x, a.y) ? 0.4 : 0));
+
+  // 开火攻击
+  if (target && target.alive) {
+    const w = a.weapons[a.curWeapon];
+    const dist = Math.hypot(target.x - a.x, target.y - a.y);
+    if (w.kind === 'melee' && dist > w.range) { const i = pickRanged(a); if (i >= 0) a.curWeapon = i; }
+    else if (w.kind !== 'melee' && dist <= w.range * 0.5 && hasMelee(a)) a.curWeapon = a.weapons.findIndex((x) => x.kind === 'melee');
+    const cw = a.weapons[a.curWeapon];
+    if (dist <= (cw.range || 60) && cw.cd <= 0) {
+      const r = fireWeapon(a, target.x, target.y, game.combatCtx());
+      if (r.fired && r.noise) game.alertNearby(a, r.noise);
+    }
+  }
+}
+
+function hasMelee(u) { return u.weapons.some((w) => w.kind === 'melee'); }
+function inSmokeSafe(game, x, y) {
+  for (const s of game.smokes) if (Math.hypot(s.x - x, s.y - y) <= s.r) return true;
+  return false;
+}
+
+// ===== ui/hud.js =====
+
+
+function drawHUD(ctx, game) {
+  const vw = game.vw, vh = game.vh;
+  // 顶部信息条
+  Render.rect(ctx, 0, 0, vw, 64, 'rgba(20,24,30,0.85)');
+  Render.text(ctx, `季节：${game.season.name}  ${Math.ceil(SEASON_DURATION - game.season.timer)}s`, 12, 22, '#fff', 15);
+  const inv = game.inventory;
+  Render.text(ctx, `金${inv.gold}  银${inv.silver}  铜${inv.copper}  宝石${inv.gems}`, 12, 44, '#ffd', 14);
+  const eq = game.equipment;
+  Render.text(ctx, `眼镜${eq.glassesUnlocked ? eq.glassesBattery + '%' : '未解锁'}  发现器${eq.detectorLevel}${eq.detectorActive ? '(开)' : ''}`, 260, 22, '#cfe', 13);
+  Render.text(ctx, `信誉${game.reputation.value} (${game.reputation.rank()})  折扣${game.reputation.discount()}`, 260, 44, '#fec', 13);
+  const allyAlive = game.allies.filter((a) => a.alive).length;
+  Render.text(ctx, `队友${allyAlive}/5`, 520, 44, allyAlive > 0 ? '#5fd3ff' : '#f88', 13);
+  const cw = game.player.weapons[game.player.curWeapon];
+  const ammoTxt = cw.ammoMax ? `弹${cw.ammo}/${cw.ammoMax}` : (cw.kind === 'trap' ? `陷阱×${game.player.traps}` : '近战∞');
+  Render.text(ctx, `水${Math.round(game.player.water)}%  [${game.player.curWeapon + 1}]${cw.name} ${ammoTxt}  陷阱${game.player.traps}`, 520, 22, '#fff', 13);
+  Render.text(ctx, `目标：${game.goal === 'destroy' ? '摧毁敌基地' : '累计资源200'}`, 520, 44, '#fff', 13);
+
+  // 基地血量
+  drawBaseBar(ctx, 12, 70, 'china', game);
+  drawBaseBar(ctx, 220, 70, 'usa', game);
+
+  // 活跃任务
+  const tasks = game.tasks.activeList();
+  Render.text(ctx, '任务：', 12, 108, '#fff', 13);
+  tasks.slice(0, 4).forEach((t, i) => {
+    Render.text(ctx, `[${t.diff}] ${t.desc}  ${t.progress}`, 12, 126 + i * 18, 'rgba(255,255,200,0.9)', 12);
+  });
+  // 可疑金（待鉴定）提示
+  if (inv.suspect.length > 0) {
+    Render.text(ctx, `⚠ 可疑金×${inv.suspect.length} — 按 R 用眼镜鉴定`, 12, 204, '#ffd76b', 14);
+  }
+  // 宝石用途提示
+  Render.text(ctx, `💎 宝石×${inv.gems}（B商店：充眼镜 / 补弹药 / 升级）`, 12, 226, '#9fe8ff', 13);
+  // 眼镜没电提示
+  if (eq.glassesUnlocked && eq.glassesBattery <= 0) {
+    Render.text(ctx, '🔋 眼镜没电！按 B 用宝石充电', vw / 2, vh - 162, '#ffd76b', 14, 'center');
+  }
+
+  // 地下宝石感应提示（未开发现器时引导按 Q）
+  const sensed = !game.equipment.detectorActive && game.nearestBuriedGem(game.equipment.detectorRadius() * 1.3);
+  if (sensed) {
+    Render.text(ctx, '🔍 探测到地下物体 — 按 Q 开启宝石发现器', vw / 2, vh - 130, 'rgba(180,230,255,0.95)', 14, 'center');
+  }
+
+  // 小地图
+  const mw = 150, mh = mw * (MAP_H / MAP_W);
+  const mx = vw - mw - 12, my = 12;
+  Render.rect(ctx, mx, my, mw, mh, 'rgba(0,0,0,0.5)');
+  const sx = mw / MAP_W, sy = mh / MAP_H;
+  for (const t of ['china', 'usa']) {
+    const b = BASE[t];
+    const c = t === 'china' ? COLORS.china : COLORS.usa;
+    Render.rect(ctx, mx + b.tx * sx, my + b.ty * sy, b.tw * sx, b.th * sy, c);
+  }
+  // 玩家
+  Render.circle(ctx, mx + game.player.x / TILE * sx, my + game.player.y / TILE * sy, 3, '#fff');
+  // 队友
+  for (const a of game.allies) if (a.alive) Render.circle(ctx, mx + a.x / TILE * sx, my + a.y / TILE * sy, 2, '#5fd3ff');
+  // 敌人
+  for (const e of game.enemies) if (e.alive) Render.circle(ctx, mx + e.x / TILE * sx, my + e.y / TILE * sy, 2, '#f55');
+
+  // 武器选择栏（底部居中，选中高亮 + 切换闪光）
+  drawWeaponBar(ctx, game);
+
+  // 消息 toast
+  let ty = vh - 40;
+  for (let i = game.messages.length - 1; i >= 0 && i > game.messages.length - 5; i--) {
+    const m = game.messages[i];
+    Render.text(ctx, m.text, vw / 2, ty, `rgba(255,255,180,${Math.min(1, m.t)})`, 14, 'center');
+    ty -= 22;
+  }
+}
+
+function drawBaseBar(ctx, x, y, team, game) {
+  const base = game.bases[team];
+  const c = team === 'china' ? COLORS.china : COLORS.usa;
+  Render.text(ctx, team === 'china' ? '中国基地' : '美国基地', x, y + 10, c, 12);
+  Render.healthBar(ctx, x, y + 14, 180, 8, base.hp / base.max, c);
+}
+
+function drawWeaponBar(ctx, game) {
+  const p = game.player;
+  if (!p) return;
+  const n = p.weapons.length;
+  const slot = 92, gap = 10;
+  const totalW = n * slot + (n - 1) * gap;
+  const x0 = game.vw / 2 - totalW / 2;
+  const y0 = game.vh - slot - 16;
+  for (let i = 0; i < n; i++) {
+    const w = p.weapons[i];
+    const x = x0 + i * (slot + gap);
+    const active = i === p.curWeapon;
+    const flash = active ? Math.max(0, p.weaponSwitchT) / 0.5 : 0;
+    const bg = active ? 'rgba(31,157,107,0.95)' : 'rgba(30,36,44,0.8)';
+    Render.rect(ctx, x, y0, slot, slot, bg);
+    const bw = active ? 3 + flash * 4 : 1.5;
+    const bc = active ? `rgba(120,255,200,${0.7 + 0.3 * flash})` : 'rgba(120,140,160,0.5)';
+    Render.strokeRect(ctx, x, y0, slot, slot, bc, bw);
+    drawWeaponIcon(ctx, x + slot / 2, y0 + 30, w, active);
+    Render.text(ctx, w.name, x + slot / 2, y0 + slot - 8, active ? '#eafff4' : '#aab', 13, 'center');
+    Render.text(ctx, String(i + 1), x + 10, y0 + 16, active ? '#bfffe9' : '#889', 12, 'left');
+    // 弹药 / 类型 醒目显示
+    if (w.kind === 'trap') {
+      Render.text(ctx, '陷阱×' + game.player.traps, x + slot / 2, y0 + slot - 26, active ? '#ffd76b' : '#9a9', 13, 'center');
+    } else if (w.ammoMax) {
+      const low = w.ammo <= 0, ratio = w.ammo / w.ammoMax;
+      const col = low ? '#ff6b6b' : (ratio < 0.3 ? '#ffd166' : '#bfffe9');
+      Render.text(ctx, w.ammo + '/' + w.ammoMax, x + slot / 2, y0 + slot - 26, col, 14, 'center');
+    } else {
+      Render.text(ctx, '近战', x + slot / 2, y0 + slot - 26, active ? '#bfffe9' : '#889', 12, 'center');
+    }
+  }
+}
+
+function drawWeaponIcon(ctx, cx, cy, w, active) {
+  const col = active ? '#eafff4' : '#cdd';
+  if (w.kind === 'melee') {
+    Render.line(ctx, cx - 13, cy + 11, cx + 13, cy - 11, col, 4);
+  } else if (w.kind === 'ranged') {
+    Render.rect(ctx, cx - 15, cy - 3, 30, 6, col);
+  } else if (w.kind === 'thrown') {
+    Render.circle(ctx, cx, cy, 7, col);
+  } else if (w.kind === 'trap') {
+    Render.strokeCircle(ctx, cx, cy, 8, col, 2);
+  }
+}
+
+// ===== ui/menus.js =====
+
+let overlay = null;
+
+function ensureOverlay() {
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'overlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+  return overlay;
+}
+function hideOverlay() { if (overlay) overlay.style.display = 'none'; }
+
+function showStart(game) {
+  const o = ensureOverlay();
+  let team = 'china';
+  let goal = 'destroy';
+  o.innerHTML = `
+    <div class="panel">
+      <h1>森林战术对战</h1>
+      <p class="sub">中美两队 · 四季森林 · 隐蔽与火力博弈</p>
+      <h3>选择队伍</h3>
+      <div class="choices" id="teamChoices">
+        <button data-t="china" class="choice sel">${TEAMS.china.name}<small>${TEAMS.china.desc}</small></button>
+        <button data-t="usa" class="choice">${TEAMS.usa.name}<small>${TEAMS.usa.desc}</small></button>
+      </div>
+      <h3>胜利目标</h3>
+      <div class="choices" id="goalChoices">
+        <button data-g="destroy" class="choice sel">摧毁敌方基地</button>
+        <button data-g="collect" class="choice">累计资源达 200</button>
+      </div>
+      <button id="startBtn" class="primary">开始游戏</button>
+      <p class="hint">WASD 移动 · 鼠标开火 · 1-3 切武器 · 空格放陷阱 · Q 发现器 · R 鉴定 · E 上报假金 · B 商店</p>
+    </div>`;
+  o.querySelectorAll('#teamChoices .choice').forEach((b) =>
+    b.onclick = () => { o.querySelectorAll('#teamChoices .choice').forEach((x) => x.classList.remove('sel')); b.classList.add('sel'); team = b.dataset.t; });
+  o.querySelectorAll('#goalChoices .choice').forEach((b) =>
+    b.onclick = () => { o.querySelectorAll('#goalChoices .choice').forEach((x) => x.classList.remove('sel')); b.classList.add('sel'); goal = b.dataset.g; });
+  o.querySelector('#startBtn').onclick = () => { hideOverlay(); game.start(team, goal); };
+}
+
+function showPause(game) {
+  const o = ensureOverlay();
+  o.innerHTML = `
+    <div class="panel">
+      <h1>已暂停</h1>
+      <button id="resume" class="primary">继续</button>
+      <button id="quit">返回主菜单</button>
+    </div>`;
+  o.querySelector('#resume').onclick = () => { hideOverlay(); game.paused = false; };
+  o.querySelector('#quit').onclick = () => { hideOverlay(); game.state = 'menu'; showStart(game); };
+}
+
+function showGameOver(game, win) {
+  const o = ensureOverlay();
+  o.innerHTML = `
+    <div class="panel">
+      <h1 style="color:${win ? '#2ecc71' : '#e74c3c'}">${win ? '胜利！' : '失败'}</h1>
+      <p class="sub">${win ? '敌方基地已被摧毁，任务达成。' : '我方基地失守或单位全灭。'}</p>
+      <p>击杀 ${game.stats.kills} · 破坏 ${Math.round(game.stats.raid)} · 宝石 ${game.stats.gems} · 信誉 ${game.reputation.value}</p>
+      <button id="again" class="primary">再来一局</button>
+    </div>`;
+  o.querySelector('#again').onclick = () => { hideOverlay(); game.state = 'menu'; showStart(game); };
+}
+
+// ===== ui/dialogs.js =====
+// 商店面板：解锁眼镜 / 宝石充电 / 升级发现器 / 升级武器（受信誉折扣）
+class Shop {
+  constructor(game) {
+    this.game = game;
+    this.el = document.createElement('div');
+    this.el.id = 'shop';
+    document.body.appendChild(this.el);
+  }
+  toggle() {
+    const open = this.el.style.display !== 'flex';
+    this.el.style.display = open ? 'flex' : 'none';
+    if (open) this.render();
+  }
+  render() {
+    const g = this.game, inv = g.inventory, eq = g.equipment, rep = g.reputation;
+    const d = rep.discount();
+    const glassesCost = Math.round(30 * d);
+    const detInfo = eq.detectorLevel === 'C'
+      ? '已是最高级'
+      : `升级至 ${eq.detectorLevel === 'A' ? 'B' : 'C'}（${Math.round((eq.detectorLevel === 'A' ? 20 : 40) * d)}金）`;
+    const w = g.player.weapons[g.player.curWeapon];
+    const glassesState = eq.glassesUnlocked ? `已配发（电量${eq.glassesBattery}%）` : `解锁 ${glassesCost}金`;
+    this.el.innerHTML = `
+      <div class="panel">
+        <h2>商店（信誉折扣 ×${d}）　持有：💎宝石${inv.gems}　金${inv.gold} 银${inv.silver} 铜${inv.copper}</h2>
+        <div class="shoprow"><span>眼科技眼镜（鉴定假金）</span><button data-a="unlock">${glassesState}</button></div>
+        <div class="shoprow"><span>宝石充电（眼镜电量充满）</span><button data-a="charge">用1宝石</button></div>
+        <div class="shoprow"><span>宝石发现器精度</span><button data-a="updet">${detInfo}</button></div>
+        <div class="shoprow"><span>升级武器[${g.player.curWeapon + 1}]${w.name}（伤害+6）</span><button data-a="upw">${Math.round(15 * d)}金</button></div>
+        <div class="shoprow"><span>宝石补给：全武器弹药补满</span><button data-a="gemammo">用2宝石</button></div>
+        <button data-a="close" class="primary">关闭 (B)</button>
+      </div>`;
+    this.el.querySelectorAll('button').forEach((b) => {
+      b.onclick = () => { this.act(b.dataset.a); this.render(); };
+    });
+  }
+  act(a) {
+    const g = this.game, inv = g.inventory, eq = g.equipment, rep = g.reputation;
+    const d = rep.discount();
+    if (a === 'unlock') {
+      if (eq.glassesUnlocked) g.toast('眼镜已配发');
+      else g.toast(eq.unlockGlasses(inv).msg);
+    } else if (a === 'charge') g.toast(eq.chargeGlasses(inv).msg);
+    else if (a === 'updet') g.toast(eq.upgradeDetector(inv).msg);
+    else if (a === 'upw') {
+      const cost = Math.round(15 * d), w = g.player.weapons[g.player.curWeapon];
+      if (inv.gold < cost) g.toast('金币不足');
+      else { inv.gold -= cost; w.dmg += 6; w.noise *= 0.9; g.toast(`${w.name} 升级！伤害${w.dmg}`); }
+    } else if (a === 'gemammo') {
+      if (inv.gems < 2) g.toast('宝石不足（需2）');
+      else {
+        inv.gems -= 2;
+        for (const w of g.player.weapons) if (w.ammoMax) w.ammo = w.ammoMax;
+        g.toast('💎 全武器弹药已补满');
+      }
+    } else if (a === 'close') this.toggle();
+  }
+}
+
+// ===== main.js =====
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class Game {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+    this.input = new Input(canvas);
+    this.camera = new Camera(this.vw, this.vh);
+    this.rng = makeRNG();
+    this.state = 'menu';
+    this.paused = false;
+    this.time = 0;
+    this.messages = [];
+    this.shop = new Shop(this);
+    // 宝石捡取按钮（DOM）
+    this.pickupEl = document.createElement('button');
+    this.pickupEl.id = 'pickupBtn';
+    this.pickupEl.style.display = 'none';
+    this.pickupEl.textContent = '💎 挖出宝石（收入账号）';
+    this.pickupEl.onclick = () => this.onPickupClick();
+    document.body.appendChild(this.pickupEl);
+    showStart(this);
+    startLoop((dt) => this.update(dt), () => this.render());
+  }
+
+  resize() {
+    this.vw = this.canvas.width = window.innerWidth;
+    this.vh = this.canvas.height = window.innerHeight;
+    if (this.camera) { this.camera.vw = this.vw; this.camera.vh = this.vh; }
+  }
+
+  foe() { return this.team === 'china' ? 'usa' : 'china'; }
+  teamCfg(t) { return TEAMS[t]; }
+  allUnits() { return [this.player, ...this.allies, ...this.enemies].filter((u) => u.alive); }
+  combatCtx() {
+    return { units: this.allUnits(), world: this.world, projectiles: this.projectiles, smokes: this.smokes, combat: this.combat, game: this };
+  }
+
+  start(team, goal) {
+    this.team = team; this.goal = goal;
+    this.world = createWorld(this.rng.int(1, 1e9));
+    this.season = new SeasonManager((s) => this.onSeasonChange(s));
+    this.equipment = new Equipment();
+    this.equipment.glassesUnlocked = true; this.equipment.glassesBattery = 100; // 开局免费配发眼镜，按R即可鉴定
+    this.inventory = new Inventory();
+    this.reputation = new Reputation();
+    this.tasks = new TaskManager();
+    this.combat = new Combat(this);
+    this.projectiles = []; this.smokes = []; this.traps = []; this.items = []; this.treeFalls = [];
+    this.allies = []; // 我方AI队友
+    this.bases = { china: { hp: 500, max: 500 }, usa: { hp: 500, max: 500 } };
+    this.stats = { kills: 0, raid: 0, gems: 0, fake: 0 };
+    this.time = 0;
+
+    const b = BASE[team];
+    this.player = new Unit(team, (b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE, true);
+    this.player.curWeapon = 1; // 开局默认持远程武器
+    this.player.maxHp = 160; this.player.hp = 160; // 玩家血量加厚
+    // 初始弹药补满
+    this.player.weapons.forEach((w) => { if (w.ammoMax) w.ammo = w.ammoMax; });
+    // 初始资源，让新手有升级空间
+    this.inventory.addResource('gold', 30);
+    this.inventory.addResource('silver', 20);
+    this.enemies = this.spawnEnemies();
+    this.allies = this.spawnAllies();
+    this.items = populateItems(this.world, this.rng);
+
+    this.tasks.addTask(TASK_TEMPLATES[0]);
+    this.tasks.addTask(TASK_TEMPLATES[2]);
+    this.state = 'playing';
+    this.paused = false;
+    this.pickupEl.style.display = 'none';
+    this.camera.follow(this.player.x, this.player.y);
+    this.toast(`你执掌${TEAMS[team].name}，目标：${goal === 'destroy' ? '摧毁敌基地' : '累计资源200'}`);
+  }
+
+  spawnEnemies() {
+    const foe = this.foe();
+    const b = BASE[foe];
+    const heroes = foe === 'usa' ? USA_HEROES : CHINA_HEROES;
+    const arr = [];
+    for (let i = 0; i < 5; i++) { // 原来是8个敌人，减到5降低压迫感
+      const ex = (b.tx + this.rng.range(0, b.tw)) * TILE;
+      const ey = (b.ty + this.rng.range(0, b.th)) * TILE;
+      const e = new Unit(foe, ex, ey);
+      e.maxHp = ENEMY_HP; e.hp = ENEMY_HP; // 保证我方3次命中击杀（敌方固定80，不叠加英雄血量）
+      e.weapons.forEach((w) => (w.ammo = 9999));
+      e.ai.homeX = ex; e.ai.homeY = ey;
+      if (foe === 'usa' && i < 2) e.ai.raider = true; // 袭击者从3减到2
+      if (foe === 'china') e.traps = 2;
+      const p = heroes[i % heroes.length];
+      e.profile = p; e.name = p.name; e.color = p.primary;
+      e.spdMul = p.spdMul || 1; e.dmgMul = p.dmgMul || 1; e.curWeapon = p.curWeapon || 0;
+      arr.push(e);
+    }
+    return arr;
+  }
+
+  // 我方AI队友：开局在基地附近生成5名中国历史战斗英雄，跟随玩家并主动迎敌
+  spawnAllies() {
+    const team = this.team;
+    const b = BASE[team];
+    const heroes = team === 'china' ? CHINA_HEROES : USA_HEROES;
+    const arr = [];
+    for (let i = 0; i < heroes.length; i++) {
+      const ax = (b.tx + this.rng.range(1, b.tw - 1)) * TILE;
+      const ay = (b.ty + this.rng.range(1, b.th - 1)) * TILE;
+      const a = new Unit(team, ax, ay);
+      a.isPlayer = false;
+      const p = heroes[i];
+      a.profile = p; a.name = p.name; a.color = p.primary;
+      a.maxHp = ALLY_HP + (p.hpBonus || 0); a.hp = a.maxHp;
+      a.spdMul = p.spdMul || 1; a.dmgMul = 1; // 我方伤害固定1，保持"3次击杀"平衡
+      a.curWeapon = p.curWeapon || 0;
+      a.weapons.forEach((w) => { if (w.ammoMax) w.ammo = w.ammoMax; });
+      a.ai.homeX = ax; a.ai.homeY = ay; a.ai.timer = 0; a.ai.state = 'follow';
+      arr.push(a);
+    }
+    return arr;
+  }
+
+  // ===== 主循环 =====
+  update(dt) {
+    if (this.state !== 'playing') return;
+    if (this.input.pressed('escape') || this.input.pressed('p')) this.togglePause();
+    if (this.paused) { this.input.endFrame(); return; }
+
+    this.time += dt;
+    this.season.update(dt);
+    this.equipment.update(dt);
+    updatePlayer(this, dt);
+    for (const e of this.enemies) updateEnemy(this, e, dt);
+    for (const a of this.allies) updateAlly(this, a, dt);
+    updateProjectiles(this.combatCtx(), dt);
+    this.updateTraps();
+    this.updateSmokes(dt);
+    this.updateTreeFalls(dt);
+    this.revealBuried();
+    this.pickupItems();
+
+    // 计时器衰减
+    if (this.player.muzzle > 0) this.player.muzzle -= dt;
+    if (this.player.weaponSwitchT > 0) this.player.weaponSwitchT -= dt;
+    for (const e of this.enemies) {
+      if (e.muzzle > 0) e.muzzle -= dt;
+      if (e.weaponSwitchT > 0) e.weaponSwitchT -= dt;
+    }
+    for (const a of this.allies) {
+      if (a.muzzle > 0) a.muzzle -= dt;
+      if (a.weaponSwitchT > 0) a.weaponSwitchT -= dt;
+    }
+
+    const eb = BASE[this.foe()];
+    if (this.player.alive && this.inRect(this.player.x, this.player.y, eb)) {
+      this.combat.damageBase(this.foe(), 45 * dt); // 原30，加快以匹配更高的基地HP
+    }
+    if (this.goal === 'collect' && this.inventory.total() >= 200) return this.win();
+    if (!this.player.alive) return this.lose();
+
+    const msgs = this.tasks.update(this.inventory, this.reputation);
+    msgs.forEach((m) => this.toast(m));
+
+    for (const m of this.messages) m.t -= dt * 0.5;
+    this.messages = this.messages.filter((m) => m.t > 0);
+
+    this.updatePickupButton();
+    this.camera.follow(this.player.x, this.player.y);
+    this.input.endFrame();
+  }
+
+  // ===== 系统回调 =====
+  toast(msg) {
+    this.messages.push({ text: msg, t: 4 });
+    if (this.messages.length > 8) this.messages.shift();
+  }
+
+  // 树木被击倒时的视觉特效（碎片飞溅 + 木屑）
+  addTreeFallFX(x, y) {
+    const fx = { x, y, life: 0.8, particles: [] };
+    for (let i = 0; i < 12; i++) {
+      const ang = (Math.PI * 2 * i / 12) + Math.random() * 0.5;
+      const spd = 40 + Math.random() * 80;
+      fx.particles.push({
+        ox: 0, oy: 0,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd - 30,
+        size: 2 + Math.random() * 3,
+        color: Math.random() > 0.5 ? '#5a3d1a' : '#8b6914',
+      });
+    }
+    this.treeFalls.push(fx);
+  }
+  placeTrap(unit) {
+    if (unit.traps > 0) {
+      this.traps.push(makeTrap(unit.team, unit.x, unit.y));
+      unit.traps--;
+      this.toast('已布置陷阱');
+    } else this.toast('没有可用陷阱');
+  }
+  toggleDetector() {
+    this.equipment.toggleDetector();
+    this.toast(`宝石发现器${this.equipment.detectorActive ? '开启（有暴露风险）' : '关闭'}`);
+  }
+  identify() {
+    const r = this.inventory.identifyAll(this.equipment, this.reputation);
+    this.toast(r.msg);
+  }
+  reportFake() {
+    if (this.inventory.fakeGold > 0) {
+      this.inventory.fakeGold--; this.reputation.gain(5);
+      this.toast('上报假金：信誉+5，老板好感提升');
+    } else this.toast('没有已确认的假金');
+  }
+  toggleShop() { this.shop.toggle(); }
+  togglePause() {
+    if (!this.paused) { this.paused = true; showPause(this); }
+    else { this.paused = false; hideOverlay(); }
+  }
+  alertNearby(unit, noise) {
+    const range = 150 + noise * 300;
+    for (const e of this.enemies) {
+      if (dist(e.x, e.y, unit.x, unit.y) < range) { e.ai.state = 'chase'; e.ai.target = this.player; }
+    }
+  }
+  onUnitKilled(u) {
+    if (u === this.player) return this.lose();
+    if (u.isPlayer) return this.lose();
+    if (u.team === this.foe()) {
+      this.stats.kills++;
+      this.tasks.event('kill', 1);
+    } else if (u.team === this.team) {
+      this.toast(`💥 ${u.name || '队友'} 阵亡！`);
+    }
+  }
+  onBaseDestroyed(team) {
+    if (team === this.foe()) return this.win();
+    if (team === this.team) return this.lose();
+  }
+  onSeasonChange(season) {
+    spawnSeasonTreasure(season, this.world, this.rng, this.items);
+    const name = { spring: '春', summer: '夏', autumn: '秋', winter: '冬' }[season];
+    this.toast(`进入${name}季 · 出现季节宝物（夏：无限水源宝石 / 冬：雪地摩托）`);
+  }
+
+  // ===== 物品与陷阱 =====
+  revealBuried() {
+    if (!this.equipment.detectorActive) return;
+    const r = this.equipment.detectorRadius();
+    for (const it of this.items) {
+      if (it.buried && !it.taken && !it.revealed && dist(this.player.x, this.player.y, it.x, it.y) <= r) it.revealed = true;
+    }
+  }
+  // 普通（非埋藏）物品自动拾取；埋藏宝石由按钮拾取
+  pickupItems() {
+    for (const it of this.items) {
+      if (it.taken || it.buried) continue;
+      if (dist(this.player.x, this.player.y, it.x, it.y) <= this.player.radius + 12) {
+        it.taken = true;
+        this.collect(it);
+      }
+    }
+    this.items = this.items.filter((i) => !i.taken);
+  }
+  collect(it) {
+    const inv = this.inventory;
+    switch (it.type) {
+      case 'gold': inv.pickSuspect(false); this.tasks.event('collect', 1); this.toast('拾得可疑金（按R鉴定）'); break;
+      case 'fakeGold': inv.pickSuspect(true); this.tasks.event('collect', 1); this.toast('拾得可疑金（按R鉴定）'); break;
+      case 'silver': case 'copper': inv.addResource(it.type, 1); this.tasks.event('collect', 1); this.toast(`拾得${it.type}`); break;
+      case 'gem': inv.addResource('gem', 1); this.stats.gems++; this.tasks.event('gem', 1); this.toast('💎 宝石已收入账号'); break;
+      case 'waterGem': this.player.hasWaterGem = true; this.toast('获得【无限水源宝石】夏季不再缺水'); break;
+      case 'snowmobile': this.player.hasSnowmobile = true; this.toast('获得【雪地摩托】冬季移速大增'); break;
+    }
+  }
+  // 最近的、已发现且可挖的埋藏宝石
+  nearbyGem() {
+    let best = null, bd = 1e9;
+    for (const it of this.items) {
+      if (it.taken || it.type !== 'gem' || !it.buried || !it.revealed) continue;
+      const d = dist(this.player.x, this.player.y, it.x, it.y);
+      if (d <= this.player.radius + 40 && d < bd) { bd = d; best = it; }
+    }
+    return best;
+  }
+  // 探测范围内（无论是否开启发现器）最近的埋藏宝石，用于提示
+  nearestBuriedGem(r) {
+    let best = null, bd = 1e9;
+    for (const it of this.items) {
+      if (it.taken || it.type !== 'gem' || !it.buried) continue;
+      const d = dist(this.player.x, this.player.y, it.x, it.y);
+      if (d <= r && d < bd) { bd = d; best = it; }
+    }
+    return best;
+  }
+  updatePickupButton() {
+    const g = this.nearbyGem();
+    this.pickupEl.style.display = g ? 'block' : 'none';
+  }
+  onPickupClick() {
+    const g = this.nearbyGem();
+    if (g) {
+      g.taken = true;
+      this.collect(g);
+      this.pickupEl.style.display = 'none';
+    }
+  }
+  updateTraps() {
+    for (const tr of this.traps) {
+      if (!tr.armed) continue;
+      const list = tr.team === this.player.team ? this.enemies : [this.player];
+      for (const u of list) {
+        if (u.alive && dist(u.x, u.y, tr.x, tr.y) <= tr.radius + u.radius) {
+          this.combat.damage(u, tr.dmg);
+          tr.armed = false;
+          this.toast('陷阱触发！');
+          break;
+        }
+      }
+    }
+    this.traps = this.traps.filter((t) => t.armed);
+  }
+  updateSmokes(dt) {
+    for (const s of this.smokes) s.life -= dt;
+    this.smokes = this.smokes.filter((s) => s.life > 0);
+  }
+  updateTreeFalls(dt) {
+    for (const fx of this.treeFalls) {
+      fx.life -= dt;
+      for (const p of fx.particles) {
+        p.ox += p.vx * dt; p.oy += p.vy * dt;
+        p.vy += 120 * dt; // 重力
+      }
+    }
+    this.treeFalls = this.treeFalls.filter((f) => f.life > 0);
+  }
+  inRect(x, y, b) {
+    const px = b.tx * TILE, py = b.ty * TILE, w = b.tw * TILE, h = b.th * TILE;
+    return x >= px && x <= px + w && y >= py && y <= py + h;
+  }
+  win() { this.state = 'over'; this.pickupEl.style.display = 'none'; showGameOver(this, true); }
+  lose() { this.state = 'over'; this.pickupEl.style.display = 'none'; showGameOver(this, false); }
+
+  // ===== 渲染 =====
+  render() {
+    const ctx = this.ctx;
+    // 高清直绘：背景天空渐变（森林上方透出的天光）
+    const sky = ctx.createLinearGradient(0, 0, 0, this.vh);
+    sky.addColorStop(0, '#cfeafe');
+    sky.addColorStop(1, '#a9d4b0');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, this.vw, this.vh);
+    if (this.state === 'menu') return;
+
+    // 高清直绘：世界直接画到主画布（不缩放、保留全部细节）
+    this.drawWorld(ctx);
+
+    // 背景与画面特效：远景天际带 + 大气光 + 暗角 + 漂浮微粒
+    this.drawSceneFX(ctx, this.camera);
+
+    drawHUD(ctx, this);
+  }
+
+  // 逼真背景：顶部远景天际带（视差山脉/流云/太阳辉光）+ 大气光 + 暗角 + 漂浮微粒
+  drawSceneFX(ctx, cam) {
+    const vw = this.vw, vh = this.vh, t = this.time;
+    // ---- 顶部远景天际带（始终可见，营造纵深）----
+    const H = Math.min(96, vh * 0.16);
+    const sky2 = ctx.createLinearGradient(0, 0, 0, H);
+    sky2.addColorStop(0, '#bfe3ff');
+    sky2.addColorStop(0.7, '#dcefff');
+    sky2.addColorStop(1, 'rgba(220,239,255,0)');
+    ctx.fillStyle = sky2;
+    ctx.fillRect(0, 0, vw, H);
+    // 太阳辉光（右上）
+    const sg = ctx.createRadialGradient(vw * 0.82, H * 0.5, 4, vw * 0.82, H * 0.5, 60);
+    sg.addColorStop(0, 'rgba(255,250,210,0.9)'); sg.addColorStop(1, 'rgba(255,250,210,0)');
+    ctx.fillStyle = sg; ctx.fillRect(vw * 0.6, 0, vw * 0.4, H);
+    // 远山（两层视差）
+    const drawHills = (par, col, baseY, amp) => {
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.moveTo(0, H);
+      for (let x = 0; x <= vw; x += 16) {
+        const wx = x + cam.x * par;
+        const y = baseY + Math.sin(wx * 0.004) * amp + Math.sin(wx * 0.011) * amp * 0.5;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(vw, H); ctx.closePath(); ctx.fill();
+    };
+    drawHills(0.15, 'rgba(150,180,210,0.55)', H * 0.62, 14);
+    drawHills(0.30, 'rgba(110,150,190,0.7)', H * 0.78, 10);
+    // 流云（视差漂移）
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    for (let i = 0; i < 4; i++) {
+      const cx = (i * 260 + (t * 12) + cam.x * 0.1) % (vw + 160) - 80;
+      const cy = H * (0.28 + 0.12 * (i % 2));
+      ctx.beginPath(); ctx.ellipse(cx, cy, 34, 12, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx + 26, cy + 4, 24, 9, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx - 24, cy + 4, 20, 8, 0, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // ---- 全屏大气光（右上阳光方向）----
+    const lg = ctx.createRadialGradient(vw * 0.8, vh * 0.2, vh * 0.2, vw * 0.8, vh * 0.2, vh * 1.1);
+    lg.addColorStop(0, 'rgba(255,248,220,0.10)');
+    lg.addColorStop(0.5, 'rgba(255,248,220,0)');
+    lg.addColorStop(1, 'rgba(20,30,40,0.10)');
+    ctx.fillStyle = lg; ctx.fillRect(0, 0, vw, vh);
+
+    // ---- 边缘暗角 ----
+    const vg = ctx.createRadialGradient(vw / 2, vh / 2, vh * 0.35, vw / 2, vh / 2, vh * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.22)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, vw, vh);
+
+    // ---- 漂浮微粒（花粉/尘埃，缓慢上升）----
+    ctx.fillStyle = 'rgba(255,255,240,0.35)';
+    for (let i = 0; i < 26; i++) {
+      const px = (i * 137.5 + cam.x * 0.5) % vw;
+      const py = (vh - ((i * 53 + t * 14) % (vh + 20)));
+      const s = (i % 3) * 0.6 + 0.6;
+      ctx.beginPath(); ctx.arc(px, py, s, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  drawWorld(ctx) {
+    const cam = this.camera;
+    const env = this.season.env();
+    const snow = env.snow;
+    const x0 = Math.max(0, Math.floor(cam.x / TILE));
+    const y0 = Math.max(0, Math.floor(cam.y / TILE));
+    const x1 = Math.min(MAP_W, Math.ceil((cam.x + this.vw) / TILE));
+    const y1 = Math.min(MAP_H, Math.ceil((cam.y + this.vh) / TILE));
+
+    // ---- 第一层：高清自然草地（渐变底色 + 柔和明暗 + 草叶纹理）----
+    const baseTop = snow ? '#eef4fa' : '#74b24d';
+    const baseBot = snow ? '#d2e0ed' : '#4c8a37';
+    const grd = ctx.createLinearGradient(0, 0, 0, this.vh);
+    grd.addColorStop(0, baseTop);
+    grd.addColorStop(1, baseBot);
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, this.vw, this.vh);
+
+    for (let ty = y0; ty < y1; ty++) {
+      for (let tx = x0; tx < x1; tx++) {
+        const c = this.world.grid[ty][tx];
+        if (c === T.TREE || c === T.BASE_C || c === T.BASE_U || c === T.WATER) continue;
+        const sx = tx * TILE - cam.x, sy = ty * TILE - cam.y;
+        const n = tileNoise(tx, ty);
+        // 柔和明暗斑块，消除棋盘格硬边
+        if (n > 0.5) ctx.fillStyle = snow ? `rgba(255,255,255,${(n - 0.5) * 0.5})` : `rgba(255,255,255,${(n - 0.5) * 0.10})`;
+        else ctx.fillStyle = snow ? `rgba(150,170,190,${(0.5 - n) * 0.25})` : `rgba(0,40,0,${(0.5 - n) * 0.18})`;
+        ctx.fillRect(sx, sy, TILE, TILE);
+        // 草叶纹理（雪天不画）
+        if (!snow && c === T.GROUND) {
+          ctx.strokeStyle = 'rgba(46,96,32,0.22)';
+          ctx.lineWidth = 1;
+          const blades = 2 + Math.floor(n * 3);
+          for (let bI = 0; bI < blades; bI++) {
+            const bx = sx + ((n * 97 + bI * 13) % TILE);
+            const by = sy + 8 + ((bI * 7 + tx) % (TILE - 12));
+            ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx - 1, by - 4); ctx.stroke();
+          }
+        }
+        // 岩石 / 河床
+        if (c === T.ROCK) drawRock(ctx, sx, sy, snow);
+        else if (c === T.RIVERBED) {
+          const rg = ctx.createLinearGradient(sx, sy, sx, sy + TILE);
+          rg.addColorStop(0, '#9c8243'); rg.addColorStop(1, '#6f5a2e');
+          ctx.fillStyle = rg; ctx.fillRect(sx, sy, TILE, TILE);
+          ctx.fillStyle = 'rgba(120,100,60,0.5)';
+          for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(sx + 8 + i * 10, sy + 12 + (i % 2) * 12, 3, 0, Math.PI * 2); ctx.fill(); }
+        }
+      }
+    }
+
+    // ---- 水域：带渐变的湖泊 ----
+    for (let ty = y0; ty < y1; ty++) {
+      for (let tx = x0; tx < x1; tx++) {
+        if (this.world.grid[ty][tx] !== T.WATER) continue;
+        const sx = tx * TILE - cam.x, sy = ty * TILE - cam.y;
+        drawLakeTile(ctx, sx, sy, tx, ty, this.time);
+      }
+    }
+
+    // ---- 基地区域：国籍主题石板广场 ----
+    for (let ty = y0; ty < y1; ty++) {
+      for (let tx = x0; tx < x1; tx++) {
+        const c = this.world.grid[ty][tx];
+        const isChina = c === T.BASE_C, isUSA = c === T.BASE_U;
+        if (!isChina && !isUSA) continue;
+        const sx = tx * TILE - cam.x, sy = ty * TILE - cam.y;
+        drawBaseFloor(ctx, sx, sy, tx, ty, isChina ? 'china' : 'usa');
+      }
+    }
+    // 基地上方叠加国籍主题装饰（旗帜/徽记/门楼）
+    drawBaseDecor(ctx, BASE.china, 'china', cam);
+    drawBaseDecor(ctx, BASE.usa, 'usa', cam);
+
+    // ---- 树木：真正的树形（阴影+树干+多层树冠）----
+    for (let ty = y0; ty < y1; ty++) {
+      for (let tx = x0; tx < x1; tx++) {
+        if (this.world.grid[ty][tx] !== T.TREE) continue;
+        const sx = tx * TILE - cam.x, sy = ty * TILE - cam.y;
+        drawTree(ctx, sx, sy, tx, ty, snow);
+      }
+    }
+
+    // ---- 地道标记 ----
+    for (let ty = y0; ty < y1; ty++) {
+      for (let tx = x0; tx < x1; tx++) {
+        if (!this.world.isTunnelAt(tx * TILE + 2, ty * TILE + 2)) continue;
+        const sx = tx * TILE - cam.x, sy = ty * TILE - cam.y;
+        Render.strokeRect(ctx, sx + 3, sy + 3, TILE - 6, TILE - 6, 'rgba(120,160,255,0.35)', 1);
+      }
+    }
+
+    // ---- 进入敌方阵地效果（红边框+警告）----
+    this.drawEnemyTerritoryEffect(ctx);
+
+    // ---- 物品、特效、单位（保持原有逻辑）----
+    // 物品：高清图标（圆角菱形 + 辉光）
+    for (const it of this.items) {
+      if (it.buried) continue;
+      const [isx, isy] = cam.toScreen(it.x, it.y);
+      const col = itemColor(it.type);
+      // 外辉光
+      ctx.fillStyle = col.replace(')', ',0.3)').replace('rgb', 'rgba');
+      if (col.startsWith('#')) {
+        // hex to rgba for glow
+        const r2 = parseInt(col.slice(1, 3), 16), g2 = parseInt(col.slice(3, 5), 16), b2 = parseInt(col.slice(5, 7), 16);
+        ctx.fillStyle = `rgba(${r2},${g2},${b2},0.35)`;
+      }
+      ctx.beginPath(); ctx.arc(isx, isy, 9, 0, Math.PI * 2); ctx.fill();
+      // 主体菱形
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(isx, isy - 7);
+      ctx.lineTo(isx + 6, isy);
+      ctx.lineTo(isx, isy + 7);
+      ctx.lineTo(isx - 6, isy);
+      ctx.closePath();
+      ctx.fill();
+      // 高光
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath();
+      ctx.moveTo(isx, isy - 7);
+      ctx.lineTo(isx + 3, isy - 2);
+      ctx.lineTo(isx, isy);
+      ctx.lineTo(isx - 3, isy - 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(isx, isy - 7); ctx.lineTo(isx + 6, isy); ctx.lineTo(isx, isy + 7); ctx.lineTo(isx - 6, isy);
+      ctx.closePath();
+      ctx.stroke();
+    }
+    // 宝石发现器扫描特效 + 已发现宝石标记
+    this.drawGemFX(ctx, cam);
+    // 烟雾
+    for (const s of this.smokes) {
+      const [ssx, ssy] = cam.toScreen(s.x, s.y);
+      ctx.fillStyle = `rgba(200,200,200,${Math.min(0.6, s.life / 6)})`;
+      ctx.beginPath(); ctx.arc(ssx, ssy, s.r, 0, Math.PI * 2); ctx.fill();
+    }
+    // 树木倒下特效（三角碎片飞溅）
+    for (const tf of this.treeFalls) {
+      const [tfx, tfy] = cam.toScreen(tf.x, tf.y);
+      const alpha = Math.min(1, tf.life / 0.8);
+      for (let i = 0; i < tf.particles.length; i++) {
+        const p = tf.particles[i];
+        const px = tfx + p.ox, py = tfy + p.oy;
+        const s = p.size;
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = alpha;
+        // 随机三角形碎片 + 木屑小圆点
+        if (i % 3 === 0) {
+          ctx.beginPath();
+          ctx.moveTo(px, py - s); ctx.lineTo(px + s * 0.7, py + s * 0.5); ctx.lineTo(px - s * 0.7, py + s * 0.5);
+          ctx.closePath(); ctx.fill();
+        } else if (i % 3 === 1) {
+          ctx.beginPath();
+          ctx.moveTo(px - s * 0.6, py - s * 0.6); ctx.lineTo(px + s * 0.8, py - s * 0.2); ctx.lineTo(px + s * 0.2, py + s * 0.8); ctx.lineTo(px - s * 0.7, py + s * 0.3);
+          ctx.closePath(); ctx.fill();
+        } else {
+          ctx.beginPath(); ctx.arc(px, py, s * 0.45, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+    // 陷阱
+    for (const tr of this.traps) {
+      if (tr.team !== this.player.team) continue;
+      const [tsx, tsy] = cam.toScreen(tr.x, tr.y);
+      Render.circle(ctx, tsx, tsy, 5, '#d4a');
+      Render.strokeCircle(ctx, tsx, tsy, 8, 'rgba(212,68,170,0.4)', 1);
+    }
+    // 抛射物
+    for (const p of this.projectiles) drawProjectile(ctx, cam, p);
+    // 单位：玩家 + 队友 + 敌人，全部人形像素造型
+    for (const u of [this.player, ...this.allies, ...this.enemies]) {
+      if (!u.alive) continue;
+      const [usx, usy] = cam.toScreen(u.x, u.y);
+      drawHumanoid(ctx, usx, usy, u, this.time, this.team);
+    }
+  }
+
+  // 敌方阵地视觉效果：红色警告边框 + 屏幕泛红 + 文字提示
+  drawEnemyTerritoryEffect(ctx) {
+    const eb = BASE[this.foe()];
+    if (!this.player.alive || !this.inRect(this.player.x, this.player.y, eb)) return;
+    const vw = this.vw, vh = this.vh;
+    const pulse = 0.5 + 0.5 * Math.sin(this.time * 4);
+    // 四周边框红闪
+    const bw = 6 + pulse * 8;
+    ctx.fillStyle = `rgba(220,40,40,${0.35 + pulse * 0.25})`;
+    ctx.fillRect(0, 0, vw, bw);       // 上
+    ctx.fillRect(0, vh - bw, vw, bw);  // 下
+    ctx.fillRect(0, 0, bw, vh);       // 左
+    ctx.fillRect(vw - bw, 0, bw, vh);  // 右
+    // 角落斜线装饰
+    ctx.strokeStyle = `rgba(255,100,80,${0.3 + pulse * 0.3})`;
+    ctx.lineWidth = 3;
+    const cl = 50;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(cl, 0); ctx.lineTo(0, cl); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(vw, 0); ctx.lineTo(vw - cl, 0); ctx.lineTo(vw, cl); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, vh); ctx.lineTo(cl, vh); ctx.lineTo(0, vh - cl); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(vw, vh); ctx.lineTo(vw - cl, vh); ctx.lineTo(vw, vh - cl); ctx.stroke();
+    // 警告文字
+    ctx.fillStyle = `rgba(255,60,60,${0.7 + pulse * 0.3})`;
+    ctx.font = `bold ${18 + pulse * 4}px "PingFang SC", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('⚠ 已进入敌方阵地！', vw / 2, 58);
+    ctx.font = '13px "PingFang SC", sans-serif';
+    ctx.fillStyle = `rgba(255,150,130,${0.6 + pulse * 0.3})`;
+    ctx.fillText('正在破坏敌方基地… 持续造成伤害', vw / 2, 80);
+  }
+
+  // 宝石发现器扫描波纹 + 已发现宝石的明显标记
+  drawGemFX(ctx, cam) {
+    const detOn = this.equipment.detectorActive;
+    if (detOn) {
+      const [psx, psy] = cam.toScreen(this.player.x, this.player.y);
+      const R = this.equipment.detectorRadius();
+      // 探测半径圈
+      Render.strokeCircle(ctx, psx, psy, R, 'rgba(120,220,255,0.25)', 1);
+      // 扩散扫描波纹
+      for (let k = 0; k < 3; k++) {
+        const phase = (this.time * 0.8 + k / 3) % 1;
+        Render.strokeCircle(ctx, psx, psy, R * phase, `rgba(120,220,255,${0.5 * (1 - phase)})`, 2);
+      }
+    }
+    // 已发现的埋藏宝石：发光菱形 + 光柱 + 标签
+    for (const it of this.items) {
+      if (!(it.type === 'gem' && it.buried && it.revealed)) continue;
+      const [sx, sy] = cam.toScreen(it.x, it.y);
+      const pulse = 0.5 + 0.5 * Math.sin(this.time * 5);
+      Render.line(ctx, sx, sy - 46, sx, sy + 6, `rgba(120,255,220,${0.22 + 0.2 * pulse})`, 6);
+      Render.circle(ctx, sx, sy, 14 + pulse * 4, `rgba(120,255,220,${0.35 + 0.3 * pulse})`);
+      drawDiamond(ctx, sx, sy, 9, '#39ffd0');
+      Render.text(ctx, '💎 宝石', sx, sy - 26, '#bfffe9', 13, 'center');
+    }
+  }
+}
+
+// 基于格子坐标的确定性伪随机（0..1），用于地面明暗、树叶扰动等
+function tileNoise(tx, ty) {
+  let h = (Math.imul(tx, 374761393) + Math.imul(ty, 668265263)) ^ 0x5bf03635;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+}
+
+function itemColor(type) {
+  return {
+    gold: COLORS.gold, silver: COLORS.silver, copper: COLORS.copper, gem: COLORS.gem,
+    fakeGold: COLORS.fake, waterGem: '#39d0ff', snowmobile: '#ecf0f1',
+  }[type] || '#fff';
+}
+
+function drawDiamond(ctx, x, y, r, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x, y - r);
+  ctx.lineTo(x + r * 0.8, y);
+  ctx.lineTo(x, y + r);
+  ctx.lineTo(x - r * 0.8, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+// 高清武器绘制（随朝向旋转，渐变金属质感）
+// 颜色明暗调整（f>0 变亮，f<0 变暗）
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  r = Math.max(0, Math.min(255, Math.round(r * (1 + f))));
+  g = Math.max(0, Math.min(255, Math.round(g * (1 + f))));
+  b = Math.max(0, Math.min(255, Math.round(b * (1 + f))));
+  return `rgb(${r},${g},${b})`;
+}
+
+// 五角星
+function drawStar(ctx, cx, cy, r, points) {
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const rad = i % 2 === 0 ? r : r * 0.45;
+    const a = -Math.PI / 2 + (i * Math.PI) / points;
+    const x = cx + Math.cos(a) * rad, y = cy + Math.sin(a) * rad;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+// 单位手持武器（按英雄 weaponStyle 或武器 kind 绘制）
+function drawPixelWeapon(ctx, hx, hy, u, teamCol) {
+  const w = u.weapons[u.curWeapon];
+  const style = (u.profile && u.profile.weaponStyle) || w.kind;
+  ctx.save();
+  ctx.translate(Math.round(hx), Math.round(hy));
+  ctx.rotate(u.facing);
+  switch (style) {
+    case 'glaive': { // 青龙偃月刀
+      ctx.fillStyle = '#6b4a2a'; ctx.fillRect(0, -1.5, 20, 3);
+      ctx.fillStyle = '#2f9a47';
+      ctx.beginPath(); ctx.moveTo(20, -2); ctx.quadraticCurveTo(31, -11, 26, 3); ctx.quadraticCurveTo(22, -2, 20, 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(200,255,210,0.55)';
+      ctx.beginPath(); ctx.moveTo(21, -3); ctx.quadraticCurveTo(29, -9, 25, 0); ctx.lineTo(20, 0); ctx.closePath(); ctx.fill();
+      break;
+    }
+    case 'spear': { // 长枪
+      ctx.fillStyle = '#6b4a2a'; ctx.fillRect(0, -1.5, 19, 3);
+      const sg = ctx.createLinearGradient(19, -3, 19, 3);
+      sg.addColorStop(0, '#e8eef5'); sg.addColorStop(1, '#9aa5b5');
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.moveTo(19, -3); ctx.lineTo(29, 0); ctx.lineTo(19, 3); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(19, -2); ctx.lineTo(28, 0); ctx.stroke();
+      break;
+    }
+    case 'bow': { // 弓
+      ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(5, 0, 9, -Math.PI * 0.6, Math.PI * 0.6); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(5 + Math.cos(-Math.PI * 0.6) * 9, Math.sin(-Math.PI * 0.6) * 9);
+      ctx.lineTo(5 + Math.cos(Math.PI * 0.6) * 9, Math.sin(Math.PI * 0.6) * 9); ctx.stroke();
+      break;
+    }
+    case 'shield': { // 星盾（美队）
+      ctx.fillStyle = '#2a4d8f'; ctx.beginPath(); ctx.arc(-2, 0, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#e8c84a'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#fff'; drawStar(ctx, -2, 0, 4, 5);
+      ctx.fillStyle = '#3a4450'; ctx.fillRect(4, -2, 9, 4);
+      ctx.fillStyle = '#5a6470'; ctx.fillRect(5, -2, 5, 1.5);
+      break;
+    }
+    case 'repulsor': { // 掌心炮（钢铁侠）
+      const rg = ctx.createRadialGradient(6, 0, 1, 6, 0, 9);
+      rg.addColorStop(0, '#eafdff'); rg.addColorStop(0.4, '#5ad1e6'); rg.addColorStop(1, 'rgba(90,209,230,0)');
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(6, 0, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(0, -2, 5, 4);
+      break;
+    }
+    case 'hammer': { // 雷神之锤
+      ctx.fillStyle = '#6b4a2a'; ctx.fillRect(0, -1.5, 14, 3);
+      const hg = ctx.createLinearGradient(13, -6, 13, 6);
+      hg.addColorStop(0, '#e8eef5'); hg.addColorStop(1, '#8a93a0');
+      ctx.fillStyle = hg; roundRect(ctx, 13, -6, 7, 12, 2);
+      ctx.fillStyle = 'rgba(90,209,230,0.55)'; ctx.fillRect(14, -5, 5, 10);
+      break;
+    }
+    case 'fist': { // 双拳（浩克）
+      ctx.fillStyle = '#3a7a2f'; ctx.beginPath(); ctx.arc(5, 0, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#2e6b27'; ctx.beginPath(); ctx.arc(5, 0, 2, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
+    case 'dualpistol': { // 双枪（黑寡妇）
+      ctx.fillStyle = '#2b3038'; ctx.fillRect(0, -3, 8, 3); ctx.fillRect(0, 1, 8, 3);
+      ctx.fillStyle = '#5a6470'; ctx.fillRect(2, -3, 5, 1.5); ctx.fillRect(2, 2.5, 5, 1.5);
+      break;
+    }
+    default: { // 通用：按武器 kind
+      if (w.kind === 'melee') {
+        const bg = ctx.createLinearGradient(0, -2, 0, 2);
+        bg.addColorStop(0, '#e8eef5'); bg.addColorStop(0.5, '#9aa5b5'); bg.addColorStop(1, '#555f6a');
+        ctx.fillStyle = bg;
+        ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(17, -1); ctx.lineTo(17, 1); ctx.lineTo(0, 2); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(16, -1); ctx.stroke();
+      } else if (w.kind === 'ranged') {
+        const bg = ctx.createLinearGradient(0, -2, 0, 2);
+        bg.addColorStop(0, '#5a6470'); bg.addColorStop(0.5, '#3a4450'); bg.addColorStop(1, '#1f252e');
+        ctx.fillStyle = bg; ctx.fillRect(0, -3, 19, 6);
+        ctx.fillStyle = '#7a8492';
+        ctx.beginPath(); ctx.moveTo(12, -5); ctx.lineTo(14, -5); ctx.lineTo(14, 5); ctx.lineTo(12, 5); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = teamCol; ctx.beginPath(); ctx.ellipse(-2, 0, 2.5, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+      } else if (w.kind === 'thrown') {
+        const rg = ctx.createRadialGradient(11, -2, 1, 11, -2, 5);
+        rg.addColorStop(0, '#f8c04a'); rg.addColorStop(0.7, '#d4782a'); rg.addColorStop(1, '#5a2d10');
+        ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(11, -2, 5, 0, Math.PI * 2); ctx.fill();
+      } else if (w.kind === 'trap') {
+        ctx.fillStyle = '#7a5580'; ctx.beginPath(); ctx.arc(7, -2, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#d4a'; ctx.lineWidth = 1.5; ctx.stroke();
+      }
+    }
+  }
+  // 枪口火光
+  if (u.muzzle > 0) {
+    const ma = ctx.createRadialGradient(19, 0, 1, 19, 0, 7);
+    ma.addColorStop(0, '#fff'); ma.addColorStop(0.3, '#ffe860'); ma.addColorStop(0.7, 'rgba(255,150,30,0.6)'); ma.addColorStop(1, 'rgba(255,80,10,0)');
+    ctx.fillStyle = ma; ctx.beginPath(); ctx.arc(19, 0, 7, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// 高清人形角色：逼真脸/发型/胡须/头盔 + 渐变躯干 + 徽记 + 名字
+function drawHumanoid(ctx, sx, sy, u, time, playerTeam) {
+  const r = u.radius;
+  const p = u.profile;
+  const primary = p ? p.primary : (u.team === 'china' ? COLORS.china : COLORS.usa);
+  const secondary = p ? p.secondary : (u.team === 'china' ? '#1d7a40' : '#b83227');
+  const accent = p ? (p.accent || '#e8c84a') : '#e8c84a';
+  const skin = p ? p.skin : COLORS.skin;
+  const skinDark = shade(skin, -0.2);
+  const hair = p ? p.hair : null;
+  const beard = p ? p.beard : false;
+  const beardColor = p ? p.beardColor : null;
+  const helmet = p ? p.helmet : 'basic';
+  const emblem = p ? p.emblem : '';
+  const cx = Math.round(sx);
+
+  // 柔和椭圆阴影
+  ctx.fillStyle = 'rgba(0,0,0,0.22)';
+  ctx.beginPath(); ctx.ellipse(cx, Math.round(sy + r + 2), r * 0.7, 3, 0, 0, Math.PI * 2); ctx.fill();
+
+  const moving = u.noise > 0.2;
+  const bob = moving ? Math.round(Math.sin(time * 12 + u.x * 0.05) * 1.5) : 0;
+  const cy = sy + bob;
+  const feetY = Math.round(cy + r);
+  const legH = 6, torsoH = 12, headR = 6, torsoW = 13, shoulderY = feetY - legH - torsoH;
+  const headY = shoulderY - headR * 2 - 1;
+  const facingRight = Math.cos(u.facing) >= 0;
+
+  // --- 腿（圆角）---
+  const lg = ctx.createLinearGradient(0, feetY - legH, 0, feetY);
+  lg.addColorStop(0, '#4a4f58'); lg.addColorStop(1, '#2a2e35');
+  ctx.fillStyle = lg;
+  roundRect(ctx, cx - 5, feetY - legH, 4, legH, 1.5);
+  roundRect(ctx, cx + 1, feetY - legH, 4, legH, 1.5);
+  ctx.fillStyle = '#1f2329';
+  roundRect(ctx, cx - 5.5, feetY - 2, 5, 3, 1);
+  roundRect(ctx, cx + 0.5, feetY - 2, 5, 3, 1);
+
+  // --- 躯干（渐变盔甲 + 高光 + 腰带 + 徽记）---
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  roundRect(ctx, cx - torsoW / 2 - 1, shoulderY - 1, torsoW + 2, torsoH + 2, 3);
+  const tg = ctx.createLinearGradient(0, shoulderY, 0, shoulderY + torsoH);
+  tg.addColorStop(0, primary); tg.addColorStop(1, secondary);
+  ctx.fillStyle = tg;
+  roundRect(ctx, cx - torsoW / 2, shoulderY, torsoW, torsoH, 2.5);
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  roundRect(ctx, cx - torsoW / 2, shoulderY, torsoW, torsoH * 0.4, 2.5);
+  ctx.fillStyle = '#1f2329';
+  roundRect(ctx, cx - torsoW / 2 - 1, shoulderY + torsoH - 3.5, torsoW + 2, 3.5, 1.5);
+  if (emblem) {
+    ctx.fillStyle = accent;
+    Render.text(ctx, emblem, cx, shoulderY + torsoH * 0.55, accent, 9, 'center');
+  }
+
+  // --- 头（逼真脸 + 发型/胡须/头盔/眼睛）---
+  drawHead(ctx, cx, headY, headR, { skin, skinDark, hair, beard, beardColor, helmet, accent, primary, facingRight });
+
+  // --- 手臂 + 武器 ---
+  drawPixelWeapon(ctx, cx, shoulderY + 6, u, primary);
+
+  // --- 玩家白色光环 ---
+  if (u.isPlayer) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(cx, (headY + feetY) / 2, r + 3, (feetY - headY) / 2 + 3, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // --- 血条（圆角）---
+  const bw2 = r * 2;
+  const barY = headY - 9;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  roundRect(ctx, cx - bw2 / 2 - 1, barY - 1, bw2 + 2, 5, 2);
+  const hpRatio = Math.max(0, u.hp / u.maxHp);
+  const hpCol = hpRatio > 0.5 ? '#5fd35f' : (hpRatio > 0.25 ? '#ffd24a' : '#ff5a4a');
+  ctx.fillStyle = hpCol;
+  roundRect(ctx, cx - bw2 / 2, barY, bw2 * hpRatio, 3, 1.5);
+
+  // --- 名字标签 ---
+  let label, labelCol;
+  if (u.isPlayer) { label = '你'; labelCol = '#ffffff'; }
+  else if (p) { label = p.name; labelCol = u.team === 'china' ? '#ffe08a' : '#ffd0c0'; }
+  else { label = u.team === playerTeam ? '友' : '敌'; labelCol = primary; }
+  Render.text(ctx, label, cx, headY - 14, labelCol, 10, 'center');
+}
+
+// 逼真头部：肤色渐变 + 发型 + 胡须 + 头盔 + 眼睛朝向
+function drawHead(ctx, hx, hy, R, o) {
+  const { skin, skinDark, hair, beard, beardColor, helmet, accent, primary, facingRight } = o;
+  // 脸
+  const hg = ctx.createRadialGradient(hx - 1, hy - 1, 1, hx, hy, R);
+  hg.addColorStop(0, skin); hg.addColorStop(1, skinDark);
+  ctx.fillStyle = hg;
+  ctx.beginPath(); ctx.arc(hx, hy, R, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 0.8; ctx.stroke();
+
+  // 头发（顶部 / 长发后披）；钢铁侠面甲覆盖则不画头发
+  if (hair && helmet !== 'ironman' && helmet !== 'hulk') {
+    ctx.fillStyle = hair;
+    if (helmet === 'thor' || helmet === 'widow') {
+      ctx.beginPath(); ctx.arc(hx, hy, R + 1.5, Math.PI * 0.8, Math.PI * 2.2); ctx.fill();
+      ctx.fillRect(hx - R - 1, hy, 2.5, R); ctx.fillRect(hx + R - 1.5, hy, 2.5, R);
+    } else {
+      ctx.beginPath(); ctx.arc(hx, hy, R + 0.5, Math.PI, Math.PI * 2); ctx.fill();
+    }
+  }
+  // 胡须
+  if (beard && beardColor) {
+    ctx.fillStyle = beardColor;
+    ctx.beginPath();
+    ctx.moveTo(hx - R * 0.7, hy + R * 0.2);
+    ctx.quadraticCurveTo(hx, hy + R * 1.4, hx + R * 0.7, hy + R * 0.2);
+    ctx.quadraticCurveTo(hx, hy + R * 0.5, hx - R * 0.7, hy + R * 0.2);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // 头盔 / 面部装饰
+  drawHelmet(ctx, hx, hy, R, o);
+
+  // 眼睛（面向侧）
+  const ex = facingRight ? 1.5 : -1.5;
+  if (helmet === 'ironman') {
+    ctx.fillStyle = '#7fe9ff';
+    ctx.beginPath(); ctx.ellipse(hx + ex - 0.5, hy - 1, 1.6, 1, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(hx + ex + 2.5, hy - 1, 1.6, 1, 0, 0, Math.PI * 2); ctx.fill();
+  } else if (helmet === 'hulk') {
+    ctx.fillStyle = '#16260f';
+    ctx.beginPath(); ctx.arc(hx + ex - 0.5, hy - 0.5, 1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx + ex + 2, hy - 0.5, 1, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#16260f'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(hx + ex - 1.5, hy - 2); ctx.lineTo(hx + ex + 0.5, hy - 1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hx + ex + 1, hy - 1); ctx.lineTo(hx + ex + 3, hy - 2); ctx.stroke();
+  } else {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(hx + ex - 0.5, hy - 1, 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath(); ctx.arc(hx + ex - 0.2, hy - 1, 0.9, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// 头盔 / 头部装饰（按风格）
+function drawHelmet(ctx, hx, hy, R, o) {
+  const { helmet, primary, accent } = o;
+  if (helmet === 'ironman') {
+    ctx.fillStyle = primary;
+    roundRect(ctx, hx - R, hy - R, R * 2, R + 2, R * 0.6); // 面甲只盖上半脸，下巴留肤色
+    ctx.strokeStyle = accent; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(hx, hy - R); ctx.lineTo(hx, hy + R); ctx.stroke();
+    return;
+  }
+  if (helmet === 'thor') {
+    ctx.strokeStyle = accent; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(hx, hy - 1, R * 0.9, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+    return;
+  }
+  if (helmet === 'widow') { ctx.fillStyle = accent; ctx.fillRect(hx - R, hy - 2, R * 2, 2); return; }
+  if (helmet === 'hulk') return;
+  // 其余：头顶盔/帽（上半弧）
+  let col = primary;
+  if (helmet === 'guan') col = '#1f7a40';
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.arc(hx, hy, R + 1, Math.PI, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 0.8; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.beginPath(); ctx.arc(hx - 2, hy - R * 0.6, R * 0.4, Math.PI, Math.PI * 2); ctx.fill();
+  if (helmet === 'guan') { ctx.fillStyle = '#e23b2e'; ctx.beginPath(); ctx.arc(hx, hy - R - 0.5, 2, 0, Math.PI * 2); ctx.fill(); }
+  else if (helmet === 'ming' || helmet === 'ming2' || helmet === 'mulant') { ctx.fillStyle = '#e23b2e'; ctx.beginPath(); ctx.arc(hx, hy - R, 1.6, 0, Math.PI * 2); ctx.fill(); }
+  if (helmet === 'mulant') {
+    ctx.fillStyle = primary;
+    ctx.beginPath(); ctx.arc(hx - R - 1, hy - R * 0.3, 2.4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx + R + 1, hy - R * 0.3, 2.4, 0, Math.PI * 2); ctx.fill();
+  }
+  if (helmet === 'cap') { ctx.fillStyle = '#fff'; drawStar(ctx, hx, hy - R * 0.3, 2.2, 5); }
+  if (helmet === 'bai') { ctx.strokeStyle = accent; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(hx, hy, R + 1, Math.PI, Math.PI * 2); ctx.stroke(); }
+}
+
+// 圆角矩形辅助函数
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// 高清投射物：渐变拖尾 + 发光圆核 + 外辉光
+function drawProjectile(ctx, cam, p) {
+  const [sx, sy] = cam.toScreen(p.x, p.y);
+  const isBullet = p.kind === 'bullet';
+  const isGrenade = p.kind === 'grenade';
+  // 拖尾（渐变透明度 + 宽度）
+  for (let i = 1; i < p.trail.length; i++) {
+    const a = i / p.trail.length;
+    const [ax, ay] = cam.toScreen(p.trail[i - 1].x, p.trail[i - 1].y);
+    const [bx, by] = cam.toScreen(p.trail[i].x, p.trail[i].y);
+    const alpha = isBullet ? a * 0.85 : a * 0.55;
+    const w = isBullet ? 3 + a * 2 : 2 + a * 1.5;
+    ctx.strokeStyle = isBullet ? `rgba(255,240,160,${alpha})` : (isGrenade ? `rgba(255,140,80,${alpha})` : `rgba(180,200,220,${alpha})`);
+    ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+  }
+  // 外辉光
+  const glowCol = isBullet ? 'rgba(255,245,180,0.4)' : (isGrenade ? 'rgba(255,150,70,0.35)' : 'rgba(200,220,240,0.3)');
+  ctx.fillStyle = glowCol;
+  ctx.beginPath(); ctx.arc(Math.round(sx), Math.round(sy), isBullet ? 8 : 8, 0, Math.PI * 2); ctx.fill();
+  // 核心发光圆
+  const coreG = ctx.createRadialGradient(sx, sy, 0, sx, sy, isBullet ? 4 : 5);
+  const coreCol = isBullet ? '#fffde0' : (isGrenade ? '#ff9a3c' : '#f0f4f8');
+  coreG.addColorStop(0, coreCol); coreG.addColorStop(0.6, isBullet ? '#ffe680' : (isGrenade ? '#e06020' : '#8899aa'));
+  coreG.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = coreG;
+  ctx.beginPath(); ctx.arc(Math.round(sx), Math.round(sy), isBullet ? 5.5 : 6, 0, Math.PI * 2); ctx.fill();
+}
+
+// ========== 地图渲染辅助函数 ==========
+
+// 逼真松树：柔和阴影 + 纹理树干 + 三层锥形渐变树冠（带受光高光边）
+function drawTree(ctx, sx, sy, tx, ty, snow) {
+  const seed = (tx * 31 + ty * 17) & 0xfff;
+  const cx = sx + 20 + ((seed % 9) - 4);
+  const baseY = sy + 38;
+  // 地面柔影
+  ctx.fillStyle = 'rgba(20,40,15,0.28)';
+  ctx.beginPath(); ctx.ellipse(cx, baseY + 1, 15, 5, 0, 0, Math.PI * 2); ctx.fill();
+  // 树干（横向木纹渐变）
+  const tg = ctx.createLinearGradient(cx - 4, 0, cx + 4, 0);
+  tg.addColorStop(0, '#5a3a1c'); tg.addColorStop(0.5, '#8a5a2e'); tg.addColorStop(1, '#4e3017');
+  ctx.fillStyle = tg;
+  ctx.fillRect(cx - 3.5, baseY - 20, 7, 20);
+  ctx.strokeStyle = 'rgba(50,30,12,0.35)'; ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) { const yy = baseY - 6 - i * 5; ctx.beginPath(); ctx.moveTo(cx - 3, yy); ctx.lineTo(cx + 3, yy); ctx.stroke(); }
+  // 三层锥形树冠
+  const layers = [
+    { y: baseY - 18, w: 30, h: 22 },
+    { y: baseY - 32, w: 24, h: 20 },
+    { y: baseY - 45, w: 17, h: 18 },
+  ];
+  for (const L of layers) {
+    const cg = ctx.createLinearGradient(cx, L.y, cx, L.y + L.h);
+    if (snow) { cg.addColorStop(0, '#f2f7f4'); cg.addColorStop(1, '#c4d4cb'); }
+    else { cg.addColorStop(0, '#3f9e57'); cg.addColorStop(1, '#1d6e34'); }
+    ctx.fillStyle = cg;
+    ctx.beginPath();
+    ctx.moveTo(cx, L.y);
+    ctx.lineTo(cx - L.w / 2, L.y + L.h);
+    ctx.lineTo(cx + L.w / 2, L.y + L.h);
+    ctx.closePath();
+    ctx.fill();
+    // 受光高光边（左）
+    ctx.strokeStyle = snow ? 'rgba(255,255,255,0.6)' : 'rgba(120,210,140,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, L.y); ctx.lineTo(cx - L.w / 2, L.y + L.h); ctx.stroke();
+  }
+  if (snow) {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.ellipse(cx - 2, baseY - 46, 8, 3, 0, 0, Math.PI * 2); ctx.fill();
+  } else {
+    ctx.fillStyle = 'rgba(140,220,150,0.7)';
+    ctx.beginPath(); ctx.ellipse(cx - 2, baseY - 44, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// 逼真岩石：径向渐变（左上受光、右下暗）+ 裂纹 + 雪盖
+function drawRock(ctx, sx, sy, snow) {
+  const cx = sx + 20, cy = sy + 24;
+  ctx.fillStyle = 'rgba(20,30,20,0.25)';
+  ctx.beginPath(); ctx.ellipse(cx, cy + 8, 14, 5, 0, 0, Math.PI * 2); ctx.fill();
+  const rg = ctx.createRadialGradient(cx - 6, cy - 6, 3, cx, cy, 18);
+  if (snow) { rg.addColorStop(0, '#f4f7fa'); rg.addColorStop(1, '#9aa6b0'); }
+  else { rg.addColorStop(0, COLORS.rockLight); rg.addColorStop(0.6, COLORS.rock); rg.addColorStop(1, COLORS.rockDark); }
+  ctx.fillStyle = rg;
+  ctx.beginPath();
+  ctx.moveTo(cx - 13, cy + 6);
+  ctx.lineTo(cx - 9, cy - 8);
+  ctx.lineTo(cx + 2, cy - 11);
+  ctx.lineTo(cx + 12, cy - 3);
+  ctx.lineTo(cx + 13, cy + 7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx + 2, cy - 11); ctx.lineTo(cx + 4, cy + 2); ctx.lineTo(cx - 3, cy + 6); ctx.stroke();
+  if (snow) { ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.ellipse(cx - 5, cy - 7, 6, 2.5, 0, 0, Math.PI * 2); ctx.fill(); }
+}
+
+// 逼真水面：蓝绿竖向渐变 + 流动波纹 + 高光点
+function drawLakeTile(ctx, sx, sy, tx, ty, time) {
+  const g = ctx.createLinearGradient(sx, sy, sx, sy + TILE);
+  g.addColorStop(0, '#3a92dd');
+  g.addColorStop(1, '#1f6fb8');
+  ctx.fillStyle = g;
+  ctx.fillRect(sx, sy, TILE, TILE);
+  const t = time || 0;
+  ctx.strokeStyle = 'rgba(185,228,255,0.5)';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 3; i++) {
+    const yy = sy + 8 + i * 11 + Math.sin(t * 1.5 + tx + i) * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(sx + 4, yy);
+    ctx.quadraticCurveTo(sx + TILE / 2, yy - 3, sx + TILE - 4, yy);
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.arc(sx + 10 + i * 18 + Math.sin(t + i) * 2, sy + 14 + i * 12, 2, 0, Math.PI * 2); ctx.fill(); }
+}
+
+// 国籍主题石板广场（逐格铺地）
+function drawBaseFloor(ctx, sx, sy, tx, ty, team) {
+  const isChina = team === 'china';
+  const base = isChina ? '#caa05a' : '#9aa6c8';   // 石板暖/冷色
+  const dark = isChina ? '#9c7838' : '#6f7c9e';
+  const bg = ctx.createLinearGradient(sx, sy, sx, sy + TILE);
+  bg.addColorStop(0, base); bg.addColorStop(1, dark);
+  ctx.fillStyle = bg; ctx.fillRect(sx, sy, TILE, TILE);
+  // 石板格缝
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1;
+  ctx.strokeRect(sx + 0.5, sy + 0.5, TILE - 1, TILE - 1);
+  // 国籍色边角点缀
+  if ((tx + ty) % 2 === 0) {
+    ctx.fillStyle = isChina ? 'rgba(200,30,40,0.25)' : 'rgba(40,70,150,0.25)';
+    ctx.fillRect(sx + 4, sy + 4, TILE - 8, TILE - 8);
+  }
+}
+
+// 基地上方国籍主题装饰（旗帜 / 徽记 / 门楼 / 灯笼或栅栏）
+function drawBaseDecor(ctx, b, team, cam) {
+  const cx = (b.tx + b.tw / 2) * TILE - cam.x;
+  const cy = (b.ty + b.th / 2) * TILE - cam.y;
+  const isChina = team === 'china';
+  const pr = isChina ? '#c4282e' : '#2a4d8f';
+  const sc = isChina ? '#e8c84a' : '#eef2f8';
+  // 地面大徽记
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = isChina ? 'rgba(200,30,40,0.18)' : 'rgba(40,70,150,0.18)';
+  ctx.beginPath(); ctx.arc(cx, cy, 34, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = isChina ? 'rgba(200,30,40,0.5)' : 'rgba(40,70,150,0.5)';
+  ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, 34, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = isChina ? '#c4282e' : '#2a4d8f';
+  if (isChina) Render.text(ctx, '中', cx, cy + 10, '#c4282e', 30, 'center');
+  else { ctx.fillStyle = '#2a4d8f'; drawStar(ctx, cx, cy, 13, 5); }
+  ctx.restore();
+
+  // 旗杆 + 国旗（基地顶边中央）
+  const fx = cx, fy = cy - b.th * TILE / 2 - 6;
+  ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 40); ctx.stroke();
+  // 旗面
+  ctx.fillStyle = pr; ctx.fillRect(fx, fy - 40, 34, 22);
+  if (isChina) {
+    // 五星红旗：大星 + 小星
+    ctx.fillStyle = '#e8c84a'; drawStar(ctx, fx + 7, fy - 33, 4, 5);
+    ctx.fillStyle = '#e8c84a';
+    for (const d of [[16, -36], [20, -32], [20, -28], [16, -24]]) drawStar(ctx, fx + d[0], fy + d[1], 1.6, 5);
+  } else {
+    // 星条旗：条纹 + 蓝角星
+    for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#eef2f8' : '#c4282e'; ctx.fillRect(fx, fy - 40 + i * 5.5, 34, 2.8); }
+    ctx.fillStyle = '#2a4d8f'; ctx.fillRect(fx, fy - 40, 14, 11);
+    ctx.fillStyle = '#eef2f8'; drawStar(ctx, fx + 4, fy - 36, 1.6, 5); drawStar(ctx, fx + 9, fy - 36, 1.6, 5);
+  }
+  // 顶饰
+  ctx.fillStyle = sc; ctx.beginPath(); ctx.arc(fx, fy - 40, 2, 0, Math.PI * 2); ctx.fill();
+
+  // 风格化门楼 / 栅栏
+  const w = b.tw * TILE, left = cx - w / 2, top = cy - b.th * TILE / 2;
+  if (isChina) {
+    // 飞檐门楼（红柱 + 金色翘檐）
+    ctx.fillStyle = '#8a1f17'; ctx.fillRect(left, top - 4, 6, 10); ctx.fillRect(left + w - 6, top - 4, 6, 10);
+    const rg = ctx.createLinearGradient(0, top - 16, 0, top - 2);
+    rg.addColorStop(0, '#c4282e'); rg.addColorStop(1, '#8a1f17');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.moveTo(left - 6, top - 2); ctx.quadraticCurveTo(left + w / 2, top - 20, left + w + 6, top - 2);
+    ctx.lineTo(left + w - 4, top - 2); ctx.quadraticCurveTo(left + w / 2, top - 12, left + 4, top - 2);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#e8c84a'; ctx.fillRect(left - 6, top - 4, w + 12, 3);
+    // 红灯笼
+    for (const lx of [left + 10, left + w - 10]) {
+      ctx.fillStyle = '#e23b2e'; ctx.beginPath(); ctx.ellipse(lx, top + 6, 4, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e8c84a'; ctx.fillRect(lx - 1, top + 1, 2, 1.5); ctx.fillRect(lx - 1, top + 11, 2, 1.5);
+    }
+  } else {
+    // 白栅栏
+    ctx.fillStyle = '#eef2f8';
+    for (let i = 0; i <= w; i += 12) ctx.fillRect(left + i, top - 2, 3, 10);
+    ctx.fillRect(left, top + 2, w, 3);
+    // 鹰徽（简笔）
+    ctx.fillStyle = '#cfd6e2';
+    ctx.beginPath(); ctx.moveTo(cx, top + 14); ctx.lineTo(cx - 8, top + 9); ctx.lineTo(cx - 3, top + 12);
+    ctx.lineTo(cx, top + 10); ctx.lineTo(cx + 3, top + 12); ctx.lineTo(cx + 8, top + 9); ctx.closePath(); ctx.fill();
+  }
+}
+
+// 启动
+const canvas = document.getElementById('game');
+const __game = new Game(canvas);
+if (typeof window !== 'undefined') window.__game = __game;
+
+  </script>
+</body>
+</html>
