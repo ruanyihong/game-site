@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WorkBuddy 3天训练营 · 学习地图</title>
+<style>
+  :root{
+    --wb-blue:#2b6cff;
+    --wb-blue-dark:#1b4fd6;
+    --wb-purple:#7c5cff;
+    --wb-bg:#f6f8fc;
+    --wb-card:#ffffff;
+    --wb-text:#1f2733;
+    --wb-sub:#5b6675;
+    --wb-line:#e6ebf3;
+    --wb-green:#19b36b;
+    --wb-amber:#f5a623;
+    --shadow:0 6px 22px rgba(33,60,120,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:var(--wb-bg);color:var(--wb-text);line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:18px 16px 60px}
+  header.hero{
+    background:linear-gradient(120deg,var(--wb-blue),var(--wb-purple));
+    color:#fff;border-radius:18px;padding:26px 24px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+  }
+  header.hero::after{content:"";position:absolute;right:-40px;top:-40px;width:180px;height:180px;background:rgba(255,255,255,.12);border-radius:50%}
+  header.hero h1{font-size:22px;font-weight:800;letter-spacing:.5px}
+  header.hero p{margin-top:6px;font-size:13px;opacity:.92}
+  .progress-shell{margin-top:16px;background:rgba(255,255,255,.22);border-radius:99px;height:12px;overflow:hidden}
+  .progress-bar{height:100%;width:0;background:#fff;border-radius:99px;transition:width .4s ease}
+  .progress-label{margin-top:8px;font-size:12px;opacity:.95}
+  .tabs{display:flex;gap:8px;margin:18px 0 6px;flex-wrap:wrap}
+  .tab{
+    flex:1;min-width:120px;text-align:center;padding:11px 8px;border-radius:12px;background:var(--wb-card);
+    border:1px solid var(--wb-line);cursor:pointer;font-weight:700;font-size:14px;color:var(--wb-sub);transition:.2s;
+  }
+  .tab small{display:block;font-weight:500;font-size:11px;margin-top:2px}
+  .tab.active{background:var(--wb-blue);color:#fff;border-color:var(--wb-blue);box-shadow:var(--shadow)}
+  .panel{display:none;margin-top:14px}
+  .panel.active{display:block;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .day-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .day-badge{background:var(--wb-blue);color:#fff;font-weight:800;border-radius:10px;padding:6px 12px;font-size:14px}
+  .day-theme{font-size:15px;font-weight:700}
+  .card{background:var(--wb-card);border:1px solid var(--wb-line);border-radius:14px;padding:16px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .card h3{font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .card h3 .tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:#eef3ff;color:var(--wb-blue)}
+  .goals{display:flex;flex-wrap:wrap;gap:8px}
+  .goal{background:#f1f5ff;color:var(--wb-blue-dark);font-size:12px;padding:5px 10px;border-radius:99px;font-weight:600}
+  table.sched{width:100%;border-collapse:collapse;font-size:13px}
+  table.sched th,table.sched td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--wb-line);vertical-align:top}
+  table.sched th{color:var(--wb-sub);font-weight:700;white-space:nowrap;width:90px}
+  table.sched tr:last-child td{border-bottom:none}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px}
+  .pill.am{background:#e9f7ef;color:var(--wb-green)}
+  .pill.pm{background:#fff3e0;color:var(--wb-amber)}
+  .pill.review{background:#f3eaff;color:var(--wb-purple)}
+  ul.lab{list-style:none}
+  ul.lab li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--wb-line)}
+  ul.lab li:last-child{border-bottom:none}
+  .cb{flex:0 0 auto;width:20px;height:20px;border-radius:6px;border:2px solid var(--wb-blue);cursor:pointer;margin-top:2px;position:relative;transition:.15s}
+  .cb.checked{background:var(--wb-blue)}
+  .cb.checked::after{content:"✓";color:#fff;font-size:13px;font-weight:800;position:absolute;left:3px;top:-1px}
+  .lab-body{flex:1}
+  .lab-title{font-weight:700;font-size:14px}
+  .lab-meta{font-size:11px;color:var(--wb-sub);margin-top:2px}
+  .lab-desc{font-size:13px;color:var(--wb-sub);margin-top:3px}
+  .level{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;margin-left:6px}
+  .lv-guide{background:#e9f7ef;color:var(--wb-green)}
+  .lv-semi{background:#fff3e0;color:var(--wb-amber)}
+  .lv-free{background:#fdeaf0;color:#e0508a}
+  .res-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .res-item{background:#f8faff;border:1px solid var(--wb-line);border-radius:12px;padding:12px}
+  .res-item h4{font-size:13px;margin-bottom:6px;color:var(--wb-blue-dark)}
+  .res-item p{font-size:12px;color:var(--wb-sub)}
+  .faq{font-size:13px}
+  .faq dt{font-weight:700;margin-top:10px}
+  .faq dd{color:var(--wb-sub);margin-top:2px}
+  .note{font-size:12px;color:var(--wb-sub);background:#fff8e6;border:1px solid #ffe3a3;border-radius:10px;padding:10px 12px;margin-top:10px}
+  footer{text-align:center;color:var(--wb-sub);font-size:12px;margin-top:24px}
+  .reset{background:none;border:1px solid var(--wb-line);color:var(--wb-sub);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;margin-top:10px}
+  @media(max-width:600px){.res-grid{grid-template-columns:1fr}.wrap{padding:14px 12px 50px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>🚀 WorkBuddy 3天大学生训练营 · 学习地图</h1>
+    <p>80人 · 约10-11组 · 自由选题解决真实痛点 → Day3 小组路演票选优胜</p>
+    <div class="progress-shell"><div class="progress-bar" id="bar"></div></div>
+    <div class="progress-label" id="plabel">学习进度：0 / 0 项完成（勾选任务自动保存）</div>
+    <button class="reset" id="resetBtn" style="color:#fff;border-color:rgba(255,255,255,.6)">重置我的进度</button>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-day="d1">Day 1<small>认知·破冰·上手</small></div>
+    <div class="tab" data-day="d2">Day 2<small>进阶·造物·串联</small></div>
+    <div class="tab" data-day="d3">Day 3<small>实战·冲刺·路演</small></div>
+    <div class="tab" data-day="res">资源<small>Skill·FAQ·联系</small></div>
+  </div>
+
+  <!-- ===== Day 1 ===== -->
+  <section class="panel active" id="d1">
+    <div class="day-head"><span class="day-badge">Day 1</span><span class="day-theme">认知 · 破冰 · 上手 —— 认识 WorkBuddy，建立全局地图，学会最基础的交互与产出</span></div>
+
+    <div class="card">
+      <h3>🎯 今日能力目标 <span class="tag">由浅入深</span></h3>
+      <div class="goals">
+        <span class="goal">理解 WorkBuddy 能做什么</span>
+        <span class="goal">掌握 Craft/Plan/Ask 三模式</span>
+        <span class="goal">学会把需求说清楚（提示词）</span>
+        <span class="goal">完成第一次对话产出</span>
+        <span class="goal">用现有 Skill 解决一件事</span>
+        <span class="goal">产出第一个可视化 Artifact</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📅 上午 · 授课 + 破冰 + 分组 <span class="tag">建认知</span></h3>
+      <table class="sched">
+        <tr><th><span class="pill am">09:00</span></th><td><b>开营仪式</b>：讲师宣讲训练营目标、3天节奏、最终评比规则</td></tr>
+        <tr><th><span class="pill am">09:15</span></th><td><b>破冰活动</b>：互动游戏快速认识，按"互补性"分组（技术/表达/创意混搭）</td></tr>
+        <tr><th><span class="pill am">09:45</span></th><td><b>组内选举</b>：选出组长/学委/主讲/技术/记录，发放职能卡</td></tr>
+        <tr><th><span class="pill am">10:05</span></th><td><b>🔥 公布 3 天全览学习地图</b>：本网页首次亮相，讲清每天主题、能力阶梯、最终交付物与票选规则</td></tr>
+        <tr><th><span class="pill am">10:25</span></th><td><b>授课①</b>：WorkBuddy 是什么 / 能做什么（对话、研究写作、数据分析、建应用、多模态、系统访问）</td></tr>
+        <tr><th><span class="pill am">10:55</span></th><td><b>授课②</b>：核心交互范式 Craft/Plan/Ask 三模式 + 把需求说清楚（提示词基本功）</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>🛠 下午 · 递进式实训（3 个） <span class="tag">练手</span></h3>
+      <ul class="lab">
+        <li><div class="cb" data-id="d1-l1"></div><div class="lab-body">
+          <div class="lab-title">实训1 · 第一次对话 <span class="level lv-guide">引导式</span></div>
+          <div class="lab-meta">45min · 个人</div>
+          <div class="lab-desc">让 WorkBuddy 帮你写一份"自我介绍/周报"，体会对话式产出。</div>
+        </div></li>
+        <li><div class="cb" data-id="d1-l2"></div><div class="lab-body">
+          <div class="lab-title">实训2 · 用现成 Skill <span class="level lv-guide">引导式</span></div>
+          <div class="lab-meta">60min · 个人</div>
+          <div class="lab-desc">选一个推荐 Skill（文案/绘图/数据分析），完成一个小任务并截图留存。</div>
+        </div></li>
+        <li><div class="cb" data-id="d1-l3"></div><div class="lab-body">
+          <div class="lab-title">实训3 · 产出第一个 Artifact <span class="level lv-semi">半引导</span></div>
+          <div class="lab-meta">45min · 小组</div>
+          <div class="lab-desc">让 WorkBuddy 生成一个可视化产物（图表/网页原型/小工具雏形），存到小组空间。</div>
+        </div></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🔁 结尾复盘 <span class="tag">沉淀</span></h3>
+      <ul class="lab">
+        <li><div class="cb" data-id="d1-r1"></div><div class="lab-body">
+          <div class="lab-title">小组复盘 + 全班投票</div>
+          <div class="lab-desc">各组学委用"3句话"复盘今日收获+卡点；全班投票"今日最佳提问"（30min）。</div>
+        </div></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== Day 2 ===== -->
+  <section class="panel" id="d2">
+    <div class="day-head"><span class="day-badge">Day 2</span><span class="day-theme">进阶 · 造物 · 串联 —— 从"会对话"到"会造物"，为 Day3 项目铺能力</span></div>
+
+    <div class="card">
+      <h3>🎯 今日能力目标 <span class="tag">环环相扣</span></h3>
+      <div class="goals">
+        <span class="goal">掌握 Skill 体系与专家中心</span>
+        <span class="goal">用 WorkBuddy 从0搭一个能跑的小工具</span>
+        <span class="goal">数据分析 / 多模态 / 自动化入门</span>
+        <span class="goal">为 Day3 项目做技术侦察</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📅 上午 · 授课 <span class="tag">建认知</span></h3>
+      <table class="sched">
+        <tr><th><span class="pill am">09:00</span></th><td><b>授课①</b>：Skill 体系与专家中心 —— 怎么发现/安装/使用 Skill，什么是专家，何时调专家</td></tr>
+        <tr><th><span class="pill am">09:30</span></th><td><b>授课②</b>：用 WorkBuddy 建东西 —— 需求→原型→构建→预览→迭代，现场 live build 一个网页小工具</td></tr>
+        <tr><th><span class="pill am">10:15</span></th><td><b>授课③</b>：数据/分析/多模态/自动化概览 —— 读数据、画图、生成图片视频、做定时任务</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>🛠 下午 · 递进式实训（3 个） <span class="tag">练手</span></h3>
+      <ul class="lab">
+        <li><div class="cb" data-id="d2-l1"></div><div class="lab-body">
+          <div class="lab-title">实训1 · 装一个 Skill 并实战 <span class="level lv-guide">引导式</span></div>
+          <div class="lab-meta">60min · 个人</div>
+          <div class="lab-desc">装一个专业 Skill（如数据分析/绘图），对自己感兴趣的数据做分析并出图。</div>
+        </div></li>
+        <li><div class="cb" data-id="d2-l2"></div><div class="lab-body">
+          <div class="lab-title">实训2 · 搭一个能跑的小工具 <span class="level lv-semi">半引导</span></div>
+          <div class="lab-meta">75min · 小组</div>
+          <div class="lab-desc">用 WorkBuddy 从0搭一个本地可打开的网页小工具（待办/计算器/信息卡等）。</div>
+        </div></li>
+        <li><div class="cb" data-id="d2-l3"></div><div class="lab-body">
+          <div class="lab-title">实训3 · 给 Day3 项目做技术侦察 <span class="level lv-free">独立</span></div>
+          <div class="lab-meta">45min · 小组</div>
+          <div class="lab-desc">小组选定真实痛点，用 WorkBuddy 做竞品/可行性/方案草图调研，产出一页《项目侦察报告》。</div>
+        </div></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🔁 结尾复盘 <span class="tag">沉淀</span></h3>
+      <ul class="lab">
+        <li><div class="cb" data-id="d2-r1"></div><div class="lab-body">
+          <div class="lab-title">侦察报告互评 + 冲刺要点</div>
+          <div class="lab-desc">各组展示"侦察报告"雏形并互评；讲师点出 Day3 冲刺要点与常见坑（30min）。</div>
+        </div></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== Day 3 ===== -->
+  <section class="panel" id="d3">
+    <div class="day-head"><span class="day-badge">Day 3</span><span class="day-theme">实战 · 冲刺 · 路演 —— 把前两天所学用于一个真实创新项目的完整交付</span></div>
+
+    <div class="card">
+      <h3>🎯 今日目标 <span class="tag">真实交付</span></h3>
+      <div class="goals">
+        <span class="goal">小组交付一个能跑/能演示的真实项目</span>
+        <span class="goal">完成路演 + 全体票选优胜</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📅 上午 · 真实项目冲刺 <span class="tag">冲刺</span></h3>
+      <table class="sched">
+        <tr><th><span class="pill am">08:30</span></th><td><b>项目启动会</b>：各组明确真实痛点/用户/目标，提交《项目立项书》</td></tr>
+        <tr><th><span class="pill am">09:00</span></th><td><b>冲刺1 需求与设计</b>：用 WorkBuddy 做用户故事/原型/功能清单</td></tr>
+        <tr><th><span class="pill am">10:00</span></th><td><b>冲刺2 构建</b>：用 WorkBuddy 实际搭建（网页/工具/自动化），产出可演示版本</td></tr>
+        <tr><th><span class="pill am">11:30</span></th><td><b>冲刺3 打磨与彩排</b>：完善交付物、写路演稿、组内预演</td></tr>
+        <tr><th><span class="pill am">12:15</span></th><td><b>提交 + 抽签</b>：提交《项目交付物清单》，路演顺序抽签</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>🏆 下午 · 路演 + 全体票选 <span class="tag">交付</span></h3>
+      <table class="sched">
+        <tr><th><span class="pill pm">13:30</span></th><td>路演规则宣讲 + 发放评分表</td></tr>
+        <tr><th><span class="pill pm">13:40</span></th><td>各组路演（每组 8min 展示 + 3min 问答，约11组共约 2h20m）</td></tr>
+        <tr><th><span class="pill pm">16:00</span></th><td>全体投票 + 讲师评审团打分</td></tr>
+        <tr><th><span class="pill pm">16:15</span></th><td>颁奖（优胜小组/最佳路演/最佳创新/最佳协作）+ 结营仪式 + 合影</td></tr>
+      </table>
+      <div class="note">评比维度：创新性 · 完成度 · 实用性 · 展示力 · 团队协作（详见《路演评分表》）</div>
+    </div>
+
+    <div class="card">
+      <h3>✅ Day3 交付物清单（勾选完成） <span class="tag">验收</span></h3>
+      <ul class="lab">
+        <li><div class="cb" data-id="d3-p1"></div><div class="lab-body"><div class="lab-title">《项目立项书》</div><div class="lab-desc">明确痛点、用户、目标与范围。</div></div></li>
+        <li><div class="cb" data-id="d3-p2"></div><div class="lab-body"><div class="lab-title">原型 / 功能清单</div><div class="lab-desc">用户故事 + 页面或功能草图。</div></div></li>
+        <li><div class="cb" data-id="d3-p3"></div><div class="lab-body"><div class="lab-title">可演示的成果</div><div class="lab-desc">网页/工具/自动化，能现场跑起来或演示。</div></div></li>
+        <li><div class="cb" data-id="d3-p4"></div><div class="lab-body"><div class="lab-title">路演稿 + 演示素材</div><div class="lab-desc">8分钟讲清楚"解决什么问题、怎么做的、效果如何"。</div></div></li>
+        <li><div class="cb" data-id="d3-p5"></div><div class="lab-body"><div class="lab-title">《项目交付物清单》</div><div class="lab-desc">中午前提交，作为路演与评分依据。</div></div></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== Resources ===== -->
+  <section class="panel" id="res">
+    <div class="day-head"><span class="day-badge">资源</span><span class="day-theme">推荐 Skill · 常见问题 · 联系我们</span></div>
+
+    <div class="card">
+      <h3>🧩 推荐 Skill（按场景）</h3>
+      <div class="res-grid">
+        <div class="res-item"><h4>写作 / 文案</h4><p>copywriting、marketing-ideas、social-content —— 写周报、推文、短视频脚本</p></div>
+        <div class="res-item"><h4>数据分析</h4><p>neodata-financial-search、westock-data —— 读数据、出图、做调研</p></div>
+        <div class="res-item"><h4>建应用 / 网页</h4><p>web-development、frontend-dev、impeccable —— 从0搭网页小工具</p></div>
+        <div class="res-item"><h4>绘图 / 可视化</h4><p>gsap-animation-assistant、Visualizer 内置 —— 图表、动效、原型</p></div>
+        <div class="res-item"><h4>效率 / 自动化</h4><p>skyline、cloudbase —— 小程序、自动化、定时任务</p></div>
+        <div class="res-item"><h4>知识 / 研究</h4><p>ima-mcp、aihot —— 知识库、AI 资讯、文献检索</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>❓ 常见问题 FAQ</h3>
+      <dl class="faq">
+        <dt>Q：WorkBuddy 是啥？需要会编程吗？</dt>
+        <dd>A：一个能对话、能写稿、能分析、能帮你搭应用的 AI 助手。小白也能用，Day1 就上手。</dd>
+        <dt>Q：小组项目必须写代码吗？</dt>
+        <dd>A：不必须。可以用对话产出文档/方案，也可以让 WorkBuddy 帮你生成网页/工具。重点是"用 AI 解决真实问题"。</dd>
+        <dt>Q：进度勾选会丢吗？</dt>
+        <dd>A：保存在你本机浏览器（localStorage），换设备不会同步；可截图打卡。</dd>
+        <dt>Q：评比怎么算？</dt>
+        <dd>A：讲师评审团打分（70%）+ 全体投票（30%），详见《路演评分表》。</dd>
+      </dl>
+    </div>
+
+    <div class="card">
+      <h3>📞 联系</h3>
+      <p style="font-size:13px;color:var(--wb-sub)">主讲师：______，助教团：______，答疑通道：训练营微信群 / 邮箱 ______。<br/>物料包根目录：<code>training-camp/</code>（含本页 + materials/ 全部模板）。</p>
+    </div>
+  </section>
+
+  <footer>WorkBuddy 3天训练营 · 学习地图 · 勾选任务即可追踪你的 3 天成长</footer>
+</div>
+
+<script>
+(function(){
+  var KEY="wb_camp_progress_v1";
+  var boxes=document.querySelectorAll(".cb");
+  function load(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return{}}}
+  function save(o){localStorage.setItem(KEY,JSON.stringify(o))}
+  var state=load();
+  function refresh(){
+    var total=boxes.length, done=0;
+    boxes.forEach(function(b){
+      var on=!!state[b.dataset.id];
+      b.classList.toggle("checked",on);
+      if(on)done++;
+    });
+    var pct=total?Math.round(done/total*100):0;
+    document.getElementById("bar").style.width=pct+"%";
+    document.getElementById("plabel").textContent="学习进度："+done+" / "+total+" 项完成（"+pct+"%）";
+  }
+  boxes.forEach(function(b){
+    b.addEventListener("click",function(){
+      state[b.dataset.id]=!state[b.dataset.id];
+      save(state);refresh();
+    });
+  });
+  document.getElementById("resetBtn").addEventListener("click",function(){
+    if(confirm("确定重置全部进度？")){state={};save(state);refresh();}
+  });
+  // tabs
+  var tabs=document.querySelectorAll(".tab");
+  tabs.forEach(function(t){
+    t.addEventListener("click",function(){
+      tabs.forEach(function(x){x.classList.remove("active")});
+      document.querySelectorAll(".panel").forEach(function(p){p.classList.remove("active")});
+      t.classList.add("active");
+      document.getElementById(t.dataset.day).classList.add("active");
+    });
+  });
+  refresh();
+})();
+</script>
+</body>
+</html>
