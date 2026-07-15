@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>每日三省吾身 · 用户使用手册</title>
+<style>
+  :root{
+    --bg:#f7f8fb;
+    --card:#ffffff;
+    --ink:#1f2430;
+    --muted:#6b7280;
+    --brand:#ff6b5b;
+    --brand2:#ffa552;
+    --accent:#5b8def;
+    --green:#22c55e;
+    --purple:#a78bfa;
+    --line:#e8eaf0;
+    --shadow:0 8px 30px rgba(31,36,48,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.75;
+  }
+  a{color:var(--accent);text-decoration:none}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    background:linear-gradient(135deg,#ff7b6b 0%,#ff9a56 45%,#ffc26b 100%);
+    color:#fff;padding:70px 20px 60px;text-align:center;position:relative;overflow:hidden;
+  }
+  .hero::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 20% 20%,rgba(255,255,255,.25),transparent 40%);}
+  .hero h1{font-size:42px;letter-spacing:2px;position:relative;z-index:1}
+  .hero .sub{font-size:17px;opacity:.95;margin-top:14px;position:relative;z-index:1}
+  .hero .url{
+    display:inline-block;margin-top:26px;padding:12px 26px;border-radius:999px;
+    background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.5);
+    font-size:18px;font-weight:600;letter-spacing:.5px;backdrop-filter:blur(4px);position:relative;z-index:1;
+  }
+
+  /* ---------- TOC ---------- */
+  .toc{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:24px 28px;margin:-30px 20px 30px;position:relative;z-index:2}
+  .toc h3{font-size:15px;color:var(--muted);margin-bottom:12px;letter-spacing:1px}
+  .toc ol{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}
+  .toc a{display:flex;align-items:center;gap:8px;color:var(--ink);padding:6px 0;font-size:15px}
+  .toc a:hover{color:var(--brand)}
+  .toc .num{display:inline-flex;width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:12px;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+
+  /* ---------- SECTION ---------- */
+  section{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:32px 34px;margin:0 20px 24px}
+  .sec-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+  .sec-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+  .ic1{background:#fff0ed}.ic2{background:#fff4e3}.ic3{background:#eaf1ff}.ic4{background:#eafaf0}.ic5{background:#f3edff}.ic6{background:#e9fbf6}
+  .sec-head h2{font-size:24px}
+  .sec-head .en{font-size:13px;color:var(--muted);font-weight:400;letter-spacing:1px}
+  p{margin:12px 0;color:#374151}
+  .lead{font-size:16px;color:#374151}
+
+  /* ---------- STEPS ---------- */
+  .steps{counter-reset:step;margin-top:14px}
+  .step{display:flex;gap:16px;padding:14px 0;border-bottom:1px dashed var(--line)}
+  .step:last-child{border-bottom:none}
+  .step .badge{
+    counter-increment:step;flex-shrink:0;width:30px;height:30px;border-radius:50%;
+    background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-top:2px;
+  }
+  .step .badge::before{content:counter(step)}
+  .step .body{flex:1}
+  .step .body b{color:var(--ink)}
+  .step .body .hint{color:var(--muted);font-size:14px;margin-top:2px}
+
+  /* ---------- FEATURE CARDS ---------- */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  .fcard{border:1px solid var(--line);border-radius:14px;padding:18px 20px;background:#fcfdff}
+  .fcard .t{font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px}
+  .fcard .d{color:var(--muted);font-size:14px;margin-top:6px}
+
+  /* ---------- CALLOUT ---------- */
+  .callout{border-radius:12px;padding:16px 20px;margin:18px 0;font-size:15px}
+  .callout.tip{background:#eafaf0;border-left:4px solid var(--green)}
+  .callout.warn{background:#fff5ed;border-left:4px solid var(--brand)}
+  .callout.info{background:#eaf1ff;border-left:4px solid var(--accent)}
+  .callout b{display:block;margin-bottom:4px}
+
+  /* ---------- CODE / BUTTON LOOK ---------- */
+  code{background:#f1f3f8;padding:2px 7px;border-radius:6px;font-size:13.5px;font-family:"SF Mono",Menlo,Consolas,monospace;color:#d6336c}
+  .pill{display:inline-block;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:13px;font-weight:600;padding:3px 12px;border-radius:999px;margin:2px 0}
+
+  /* ---------- TABLE ---------- */
+  table{width:100%;border-collapse:collapse;margin-top:16px;font-size:14.5px}
+  th,td{border:1px solid var(--line);padding:11px 14px;text-align:left}
+  th{background:#f5f7fb;font-weight:700;color:var(--ink)}
+  td{color:#374151}
+  tr:nth-child(even) td{background:#fcfdff}
+
+  /* ---------- FAQ ---------- */
+  .faq{counter-reset:q;margin-top:10px}
+  .qa{padding:16px 0;border-bottom:1px solid var(--line)}
+  .qa:last-child{border-bottom:none}
+  .qa .q{font-weight:700;font-size:16px;display:flex;gap:10px;align-items:flex-start}
+  .qa .q::before{counter-increment:q;content:counter(q);flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;margin-top:2px}
+  .qa .a{color:#374151;margin-top:8px;padding-left:34px}
+
+  /* ---------- FOOTER ---------- */
+  footer{text-align:center;padding:34px 20px 50px;color:var(--muted);font-size:14px}
+  footer .heart{color:var(--brand)}
+
+  @media (max-width:680px){
+    .toc ol,.grid{grid-template-columns:1fr}
+    .hero h1{font-size:32px}
+    section{padding:24px 20px}
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <h1>每日三省吾身</h1>
+  <div class="sub">学习生产力看板 · 云同步版 · 用户使用手册</div>
+  <div class="url">🌐 review.ruanxunan.top</div>
+</header>
+
+<!-- TOC -->
+<nav class="toc wrap">
+  <h3>📑 目录</h3>
+  <ol>
+    <li><a href="#s1"><span class="num">1</span>快速开始</a></li>
+    <li><a href="#s2"><span class="num">2</span>核心功能一览</a></li>
+    <li><a href="#s3"><span class="num">3</span>任务看板与四种视图</a></li>
+    <li><a href="#s4"><span class="num">4</span>习惯养成与连续打卡</a></li>
+    <li><a href="#s5"><span class="num">5</span>番茄钟专注计时</a></li>
+    <li><a href="#s6"><span class="num">6</span>每日 / 每周复盘卡</a></li>
+    <li><a href="#s7"><span class="num">7</span>云同步与分享（重点）</a></li>
+    <li><a href="#s8"><span class="num">8</span>数据备份与迁移</a></li>
+    <li><a href="#s9"><span class="num">9</span>常见问题 FAQ</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 快速开始 -->
+<section id="s1">
+  <div class="sec-head"><div class="sec-icon ic1">🚀</div><div><h2>快速开始</h2><div class="en">GET STARTED</div></div></div>
+  <p class="lead">不需要注册账号、不需要密码。打开网页就能用，几秒上手。</p>
+  <div class="steps">
+    <div class="step"><div class="badge"></div><div class="body"><b>打开网站</b><div class="hint">在电脑或手机浏览器访问 <code>https://review.ruanxunan.top</code>，即可进入主页面。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>直接开始记录</b><div class="hint">不登录也能用：点击「＋ 新建任务」即可添加你的第一个计划。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>（推荐）开启云同步</b><div class="hint">点右上角「☁ 云同步」→「创建我的云空间」，得到一个 6 位空间码。这样数据会存到服务器，换设备也不丢。</div></div></div>
+  </div>
+  <div class="callout tip"><b>💡 小提示</b>第一次用，建议先点「云同步」创建一个空间，再开始记任务——省得以后手动搬数据。</div>
+</section>
+
+<!-- 2. 核心功能 -->
+<section id="s2">
+  <div class="sec-head"><div class="sec-icon ic2">🧭</div><div><h2>核心功能一览</h2><div class="en">FEATURES</div></div></div>
+  <p>本工具围绕「计划 → 执行 → 复盘」的闭环设计，共 6 大模块：</p>
+  <div class="grid">
+    <div class="fcard"><div class="t">📋 任务看板</div><div class="d">规划每周 / 每日任务，拖拽管理进度，支持四种可视化视图。</div></div>
+    <div class="fcard"><div class="t">🔥 习惯养成</div><div class="d">建立每日习惯，一键打卡，生成连续天数与热力图。</div></div>
+    <div class="fcard"><div class="t">🍅 番茄钟</div><div class="d">25/45 分钟专注计时，绑定任务，记录专注时长。</div></div>
+    <div class="fcard"><div class="t">📝 每日 / 每周复盘</div><div class="d">自动生成复盘卡片，反思「三省」，沉淀成长记录。</div></div>
+    <div class="fcard"><div class="t">☁ 云同步</div><div class="d">用空间码跨设备同步，或分享给别人共用同一份计划。</div></div>
+    <div class="fcard"><div class="t">💾 数据备份</div><div class="d">一键导出 / 导入 JSON，本地留底，万无一失。</div></div>
+  </div>
+</section>
+
+<!-- 3. 任务看板 -->
+<section id="s3">
+  <div class="sec-head"><div class="sec-icon ic3">📋</div><div><h2>任务看板与四种视图</h2><div class="en">KANBAN & VIEWS</div></div></div>
+  <p>顶部有 4 个标签页，切换不同视角看同一批任务：</p>
+  <table>
+    <tr><th>视图</th><th>适合做什么</th></tr>
+    <tr><td><b>看板</b></td><td>按「待办 / 进行中 / 已完成」分列，拖拽卡片管理进度，最常用。</td></tr>
+    <tr><td><b>日历</b></td><td>按日期排布任务，直观看到某天安排了什么。</td></tr>
+    <tr><td><b>时间线</b></td><td>横向时间轴，看任务在时间上的先后与重叠。</td></tr>
+    <tr><td><b>甘特图</b></td><td>项目式排期，看清任务工期与依赖关系。</td></tr>
+  </table>
+  <div class="steps" style="margin-top:20px">
+    <div class="step"><div class="badge"></div><div class="body"><b>新建任务</b><div class="hint">点击右下角浮动按钮 <code>＋</code> 或「＋ 新建任务」，填写标题、截止日、分类、子任务（最多 5 个）。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>管理任务</b><div class="hint">点击卡片查看详情、编辑、删除；在看板里拖拽卡片改变状态。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>连续记录</b><div class="hint">点「🔥 连续」按钮查看你的打卡 streak，坚持天数一目了然。</div></div></div>
+  </div>
+</section>
+
+<!-- 4. 习惯 -->
+<section id="s4">
+  <div class="sec-head"><div class="sec-icon ic4">🔥</div><div><h2>习惯养成与连续打卡</h2><div class="en">HABITS</div></div></div>
+  <p>点击顶栏「追踪习惯」进入习惯页（<code>habits.html</code>）。</p>
+  <div class="steps">
+    <div class="step"><div class="badge"></div><div class="body"><b>添加习惯</b><div class="hint">设定一个你想每天坚持的事，例如「阅读 30 分钟」「背单词」。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>每日打卡</b><div class="hint">完成就点一下，记录今天已做；连续打卡天数会自动累加。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>查看热力墙</b><div class="hint">页面展示按日期的打卡热力图，坚持越久颜色越亮，成就感拉满。</div></div></div>
+  </div>
+  <div class="callout info"><b>📌 关于连续性</b>漏打卡当天会中断连续计数（按自然日）。但历史记录都保留，可随时回看。</div>
+</section>
+
+<!-- 5. 番茄钟 -->
+<section id="s5">
+  <div class="sec-head"><div class="sec-icon ic5">🍅</div><div><h2>番茄钟专注计时</h2><div class="en">POMODORO</div></div></div>
+  <p>点顶栏「🍅 番茄钟」打开计时面板。</p>
+  <div class="steps">
+    <div class="step"><div class="badge"></div><div class="body"><b>选择时长</b><div class="hint">支持 <code>25 分钟</code>（标准番茄）与 <code>45 分钟</code>（深度专注）两种模式。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>绑定任务（可选）</b><div class="hint">下拉选择一个看板任务，计时结束后专注时长会记到该任务上。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>开始 / 重置</b><div class="hint">点「开始」倒计时，「重置」归零。专注数据存本地，开启云同步后可跨设备累计。</div></div></div>
+  </div>
+</section>
+
+<!-- 6. 复盘 -->
+<section id="s6">
+  <div class="sec-head"><div class="sec-icon ic6">📝</div><div><h2>每日 / 每周复盘卡</h2><div class="en">REVIEW</div></div></div>
+  <p>点顶栏「📝 复盘」打开复盘卡片，这是「每日三省吾身」的精华所在。</p>
+  <div class="grid">
+    <div class="fcard"><div class="t">🌅 每日复盘</div><div class="d">每天结束时，回答「今日得失 / 明日改进 / 一句感悟」，系统自动按日期存档。</div></div>
+    <div class="fcard"><div class="t">🗓️ 每周复盘</div><div class="d">周末回顾本周计划完成率与习惯坚持，沉淀成周记，便于长期追踪。</div></div>
+  </div>
+  <div class="callout tip"><b>✍️ 建议</b>养成「每天 2 分钟写每日复盘」的习惯，半年后回看会非常有价值。</div>
+</section>
+
+<!-- 7. 云同步 -->
+<section id="s7">
+  <div class="sec-head"><div class="sec-icon ic1">☁</div><div><h2>云同步与分享（重点）</h2><div class="en">CLOUD SYNC & SHARE</div></div></div>
+  <p class="lead">这是云同步版和传统单机版最大的区别：<b>数据存在服务器上，可跨设备、可分享。</b></p>
+
+  <h3 style="margin:18px 0 4px">① 创建你自己的空间</h3>
+  <div class="steps">
+    <div class="step"><div class="badge"></div><div class="body"><b>点「☁ 云同步」</b><div class="hint">在右上角，点击云图标打开同步面板。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>「＋ 创建我的云空间」</b><div class="hint">系统生成 6 位空间码（如 <code>K7M2QP</code>），并把当前数据上传到服务器。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>之后自动同步</b><div class="hint">你每次改动，页面会在 1~2 秒内自动保存到服务器，无需手动操作。</div></div></div>
+  </div>
+
+  <h3 style="margin:20px 0 4px">② 换设备 / 换浏览器找回数据</h3>
+  <p>在新设备的浏览器打开 <code>review.ruanxunan.top</code>，点「☁ 云同步」→ 输入同一个空间码「加入」，数据立刻回来。空间码存在你常用浏览器的本地，<b>同一个浏览器下次打开会自动同步，不用重输</b>。</p>
+
+  <h3 style="margin:20px 0 4px">③ 分享给别人共用</h3>
+  <div class="steps">
+    <div class="step"><div class="badge"></div><div class="body"><b>复制空间码或链接</b><div class="hint">在同步面板点「复制空间码」或「复制分享链接」。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>发给朋友</b><div class="hint">对方打开网站 →「☁ 云同步」→ 输入码加入，即可看到并编辑同一份计划。</div></div></div>
+  </div>
+  <div class="callout warn"><b>⚠️ 多人协作须知</b>同一空间采用「<b>最后保存者覆盖</b>」策略——适合个人多端同步、或小范围协作。多人同时大改同一份数据时，后保存的会覆盖先保存的，注意错峰编辑。</div>
+  <div class="callout info"><b>🔗 分享链接</b>链接形如 <code>https://review.ruanxunan.top/?join=K7M2QP</code>，对方点开会自动填入空间码并加入，最省事。</div>
+</section>
+
+<!-- 8. 数据备份 -->
+<section id="s8">
+  <div class="sec-head"><div class="sec-icon ic2">💾</div><div><h2>数据备份与迁移</h2><div class="en">BACKUP</div></div></div>
+  <p>虽然数据已在服务器，仍建议定期本地备份一份，双重保险。</p>
+  <div class="steps">
+    <div class="step"><div class="badge"></div><div class="body"><b>导出</b><div class="hint">点顶栏「💾 数据」→ 导出，浏览器会下载一个 <code>.json</code> 文件，存到电脑即可。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>导入</b><div class="hint">换电脑或数据异常时，点「💾 数据」→ 导入，选择之前的 json 文件恢复。</div></div></div>
+    <div class="step"><div class="badge"></div><div class="body"><b>退出同步</b><div class="hint">在云同步面板点「退出同步」，本机数据保留，只是停止与服务器同步。</div></div></div>
+  </div>
+  <div class="callout tip"><b>🗂️ 服务器端备份</b>所有数据在服务器 <code>/opt/daily-review/data/</code> 目录（每个空间一个 json 文件）。运维者可定期拷贝该目录做整机备份。</div>
+</section>
+
+<!-- 9. FAQ -->
+<section id="s9">
+  <div class="sec-head"><div class="sec-icon ic3">❓</div><div><h2>常见问题 FAQ</h2><div class="en">FAQ</div></div></div>
+  <div class="faq">
+    <div class="qa"><div class="q">关掉浏览器后数据会没了吗？</div><div class="a">不会。数据存在浏览器本地（localStorage），关掉再打开同一浏览器还在。若已创建云空间，空间码也记在本地，下次打开会自动同步，无需重输。</div></div>
+    <div class="qa"><div class="q">换手机 / 换电脑怎么拿回数据？</div><div class="a">打开网站 →「☁ 云同步」→ 输入你的 6 位空间码加入，数据立刻从服务器拉回。</div></div>
+    <div class="qa"><div class="q">需要注册账号吗？</div><div class="a">完全不需要。用「空间码」机制代替账号，免注册、免密码、即开即用。</div></div>
+    <div class="qa"><div class="q">分享给别人后，他能改我的数据吗？</div><div class="a">能。同一空间码下所有人读写同一份数据（最后保存者覆盖）。只自己用就不分享即可。</div></div>
+    <div class="qa"><div class="q">忘记空间码了怎么办？</div><div class="a">常用浏览器里仍记着码，打开同步面板即可看到。若清了缓存，可用「💾 数据」导入本地 json 恢复，或重新创建新空间。</div></div>
+    <div class="qa"><div class="q">网站打不开 / 很慢？</div><div class="a">检查网络；或确认服务器正常运行。若长时间不可用，可用本地导出的 json 先在别处恢复查看。</div></div>
+    <div class="qa"><div class="q">数据会丢吗？</div><div class="a">三重保障：①浏览器本地 ②服务器 ③你手动导出的 json。同时丢的概率极低。</div></div>
+  </div>
+</section>
+
+<footer>
+  <p>每日三省吾身 · 学习生产力看板 &nbsp;|&nbsp; 访问地址：<a href="https://review.ruanxunan.top">review.ruanxunan.top</a></p>
+  <p style="margin-top:8px">用 <span class="heart">♥</span> 为你打造 · 计划 → 执行 → 复盘，每天进步一点点</p>
+</footer>
+
+</body>
+</html>
