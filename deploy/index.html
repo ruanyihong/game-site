@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>workbuddy 初认识 · 课0 — 风格探索与上线版</title>
+
+<!-- Fonts: Google Fonts（思源宋体/思源黑体 + Sora 拉丁显示字）。离线时回退到系统字体，仍保持高级排版。 -->
+<link rel="preconnect" href="https://fonts.googleapis.cn" />
+<link rel="preconnect" href="https://fonts.gstatic.cn" crossorigin />
+<link href="https://fonts.googleapis.cn/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;900&family=Sora:wght@400;600;700&display=swap" rel="stylesheet" />
+
+<style>
+/* ============================================================
+   THEME TOKENS — Day1 蓝家族（深海军蓝 + 暖金/青点缀）
+   改这里即可整体换肤。
+   ============================================================ */
+:root{
+  /* 深蓝主色系 */
+  --navy-900:#0e2238;
+  --navy-800:#14304d;
+  --navy-700:#1e3a5f;
+  --navy-600:#264a73;
+  --navy-500:#356092;
+
+  /* 点缀 */
+  --gold:#c9a24b;
+  --gold-soft:rgba(201,162,75,.14);
+  --teal:#3fb6b0;
+  --teal-soft:rgba(63,182,176,.14);
+
+  /* 文本 */
+  --ink:#f4f7fb;
+  --ink-soft:#b3c4d8;
+  --ink-dim:#7e96af;
+
+  /* 线/分隔 */
+  --line:rgba(255,255,255,.10);
+  --line-strong:rgba(255,255,255,.18);
+
+  /* 字体 */
+  --font-display:"Noto Serif SC","Songti SC","STSong",serif;
+  --font-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --font-latin:"Sora","Noto Sans SC",sans-serif;
+
+  /* 字号（全部 clamp，随视口缩放） */
+  --title-size:clamp(1.7rem,4.4vw,3.4rem);
+  --cover-title:clamp(2.6rem,7vw,5.4rem);
+  --h2-size:clamp(1.25rem,2.8vw,2rem);
+  --body-size:clamp(.82rem,1.45vw,1.12rem);
+  --small-size:clamp(.7rem,1.05vw,.92rem);
+  --kicker-size:clamp(.72rem,1.1vw,.95rem);
+
+  /* 间距 */
+  --slide-padding:clamp(1.4rem,4.2vw,4rem);
+  --content-gap:clamp(.8rem,2vw,1.8rem);
+  --element-gap:clamp(.4rem,1vw,1rem);
+
+  /* 动效 */
+  --ease:cubic-bezier(.16,1,.3,1);
+  --dur:.7s;
+}
+
+/* ============================================================
+   VIEWPORT FITTING: MANDATORY BASE (from frontend-slides skill)
+   ============================================================ */
+html,body{height:100%;overflow-x:hidden;}
+html{scroll-snap-type:y mandatory;scroll-behavior:smooth;}
+.slide{
+  width:100vw;height:100vh;height:100dvh;overflow:hidden;
+  scroll-snap-align:start;display:flex;flex-direction:column;position:relative;
+}
+.slide-content{
+  flex:1;display:flex;flex-direction:column;justify-content:center;
+  max-height:100%;overflow:hidden;padding:var(--slide-padding);
+  padding-bottom:clamp(3.2rem,7vh,5.5rem); /* 给页脚 OPC 留位 */
+}
+:root{
+  --title-size:clamp(1.5rem,5vw,4rem);
+  --h2-size:clamp(1.25rem,3.5vw,2.5rem);
+  --h3-size:clamp(1rem,2.5vw,1.75rem);
+  --body-size:clamp(.75rem,1.5vw,1.125rem);
+  --small-size:clamp(.65rem,1vw,.875rem);
+  --slide-padding:clamp(1rem,4vw,4rem);
+  --content-gap:clamp(.5rem,2vw,2rem);
+  --element-gap:clamp(.25rem,1vw,1rem);
+}
+.card,.container,.content-box{max-width:min(90vw,1000px);max-height:min(80vh,700px);}
+.feature-list,.bullet-list{gap:clamp(.4rem,1vh,1rem);}
+.feature-list li,.bullet-list li{font-size:var(--body-size);line-height:1.4;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:clamp(.5rem,1.5vw,1rem);}
+img,.image-container{max-width:100%;max-height:min(50vh,400px);object-fit:contain;}
+/* === v2.2 概念页单图（紧凑型） === */
+.shot-single.compact{margin-top:1rem;}
+.shot-single.compact .shot-card{max-height:min(26vh,230px);}
+.shot-single.compact .shot-label{font-size:calc(var(--small-size) * .92);}
+
+/* === v2.1 真实截图增强 === */
+.shot-card{
+  background:linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:1rem;
+  padding:0.5rem;
+  box-shadow:0 18px 50px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.08);
+  overflow:hidden;
+  transition:transform .35s ease, box-shadow .35s ease;
+}
+.shot-card:hover{transform:translateY(-4px); box-shadow:0 24px 60px rgba(0,0,0,.32);}
+.shot-card img{
+  width:100%; height:100%; object-fit:cover; border-radius:.6rem;
+  display:block;
+}
+.shot-label{
+  font-size:var(--small-size); color:var(--text-dim); margin-top:.4rem;
+  text-align:center; letter-spacing:.02em;
+}
+.shot-row{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); gap:1rem;
+  width:100%; max-width:min(92vw, 1100px); margin-top:1.2rem;
+}
+.shot-row.two{grid-template-columns:1fr 1fr;}
+.shot-row.three{grid-template-columns:1fr 1fr 1fr;}
+.shot-row .shot-card{max-height:min(36vh, 320px); min-height:120px;}
+.shot-hero{
+  display:grid; grid-template-columns:1.1fr 1fr; gap:1.5rem;
+  align-items:center; width:100%; max-width:min(92vw, 1100px); margin-top:1.2rem;
+}
+.shot-hero .shot-card{max-height:min(48vh, 420px);}
+.shot-single{
+  width:100%; max-width:min(86vw, 900px); margin-top:1.2rem;
+}
+.shot-single .shot-card{max-height:min(42vh, 360px);}
+@media (max-width: 900px){
+  .shot-hero{grid-template-columns:1fr;}
+  .shot-row.two, .shot-row.three{grid-template-columns:1fr;}
+}
+
+@media (max-height:700px){
+  :root{--slide-padding:clamp(.75rem,3vw,2rem);--content-gap:clamp(.4rem,1.5vw,1rem);--title-size:clamp(1.25rem,4.5vw,2.5rem);--h2-size:clamp(1rem,3vw,1.75rem);}
+}
+@media (max-height:600px){
+  :root{--slide-padding:clamp(.5rem,2.5vw,1.5rem);--content-gap:clamp(.3rem,1vw,.75rem);--title-size:clamp(1.1rem,4vw,2rem);--body-size:clamp(.7rem,1.2vw,.95rem);}
+  .nav-dots,.keyboard-hint,.decorative{display:none;}
+}
+@media (max-height:500px){
+  :root{--slide-padding:clamp(.4rem,2vw,1rem);--title-size:clamp(1rem,3.5vw,1.5rem);--h2-size:clamp(.9rem,2.5vw,1.25rem);--body-size:clamp(.65rem,1vw,.85rem);}
+}
+@media (max-width:600px){
+  :root{--title-size:clamp(1.25rem,7vw,2.5rem);}
+  .grid{grid-template-columns:1fr;}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important;}
+  html{scroll-behavior:auto;}
+}
+
+/* ============================================================
+   GLOBAL BACKGROUND — 深蓝金属渐层 + 极淡网格 + 微光
+   ============================================================ */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background:
+    radial-gradient(1200px 800px at 12% 8%, rgba(53,96,146,.35), transparent 60%),
+    radial-gradient(1000px 700px at 92% 96%, rgba(63,182,176,.12), transparent 55%),
+    radial-gradient(900px 600px at 78% 12%, rgba(201,162,75,.10), transparent 55%),
+    linear-gradient(160deg,var(--navy-800) 0%,var(--navy-900) 55%,#0a1c30 100%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+  line-height:1.5;
+}
+/* 固定网格纹理 */
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(circle at 50% 40%,#000 0%,transparent 85%);
+  -webkit-mask-image:radial-gradient(circle at 50% 40%,#000 0%,transparent 85%);
+}
+.deck{position:relative;z-index:1;}
+
+/* ============================================================
+   REVEAL 动效（opacity/transform，不引发布局错位）
+   ============================================================ */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease);transition-delay:var(--d,0s);}
+.slide.visible .reveal{opacity:1;transform:none;}
+.reveal-left{opacity:0;transform:translateX(-34px);transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease);transition-delay:var(--d,0s);}
+.slide.visible .reveal-left{opacity:1;transform:none;}
+.reveal-scale{opacity:0;transform:scale(.94);transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease);transition-delay:var(--d,0s);}
+.slide.visible .reveal-scale{opacity:1;transform:none;}
+
+/* ============================================================
+   SLIDE 通用排版
+   ============================================================ */
+.slide{width:100vw;}
+.slide .bg-glow{position:absolute;inset:0;z-index:0;pointer-events:none;}
+.slide-content{position:relative;z-index:2;}
+
+.kicker{
+  font-family:var(--font-latin);
+  font-size:var(--kicker-size);
+  letter-spacing:.18em;text-transform:uppercase;
+  color:var(--gold);font-weight:600;
+  display:inline-flex;align-items:center;gap:.5em;
+  margin-bottom:var(--element-gap);
+}
+.kicker::before{content:"";width:1.6em;height:1px;background:linear-gradient(90deg,var(--gold),transparent);}
+
+.slide-title{
+  font-family:var(--font-display);
+  font-weight:900;
+  font-size:var(--title-size);
+  line-height:1.12;
+  letter-spacing:.01em;
+  color:var(--ink);
+  margin-bottom:var(--content-gap);
+  max-width:18em;
+}
+.slide-title .hl{color:var(--gold);}
+.slide-title .teal{color:var(--teal);}
+
+.subtitle{font-size:var(--h2-size);color:var(--ink-soft);font-weight:500;max-width:34em;}
+
+.body{font-size:var(--body-size);color:var(--ink-soft);max-width:46em;line-height:1.65;}
+.body strong{color:var(--ink);font-weight:700;}
+.body .g{color:var(--gold);font-weight:700;}
+.body .t{color:var(--teal);font-weight:700;}
+
+/* 卡片 */
+.cards{display:flex;flex-wrap:wrap;gap:clamp(.7rem,1.4vw,1.3rem);margin-top:var(--content-gap);}
+.card{
+  flex:1 1 240px;min-width:0;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--line);
+  border-radius:clamp(12px,1.4vw,18px);
+  padding:clamp(.85rem,1.6vw,1.4rem);
+  transition:transform .4s var(--ease),border-color .4s var(--ease),background .4s var(--ease);
+}
+.card:hover{transform:translateY(-4px);border-color:var(--line-strong);}
+.card .ico{width:clamp(30px,3vw,42px);height:clamp(30px,3vw,42px);margin-bottom:.6em;color:var(--gold);}
+.card h3{font-size:var(--h2-size);font-weight:700;margin-bottom:.35em;color:var(--ink);font-family:var(--font-display);}
+.card p{font-size:var(--small-size);color:var(--ink-soft);line-height:1.55;}
+.card.gold{border-color:rgba(201,162,75,.42);background:linear-gradient(180deg,rgba(201,162,75,.12),rgba(201,162,75,.02));}
+.card.gold .ico{color:var(--gold);}
+.card.teal{border-color:rgba(63,182,176,.42);background:linear-gradient(180deg,rgba(63,182,176,.12),rgba(63,182,176,.02));}
+.card.teal .ico{color:var(--teal);}
+
+/* 要点列表 */
+.points{list-style:none;margin-top:var(--content-gap);display:flex;flex-direction:column;gap:var(--element-gap);max-width:48em;}
+.points li{position:relative;padding-left:1.6em;font-size:var(--body-size);color:var(--ink-soft);line-height:1.55;}
+.points li::before{content:"";position:absolute;left:0;top:.62em;width:.62em;height:.62em;border-radius:2px;background:var(--gold);transform:rotate(45deg);box-shadow:0 0 0 4px var(--gold-soft);}
+.points li b{color:var(--ink);font-weight:700;}
+
+/* 金句 */
+.quote{
+  font-family:var(--font-display);font-weight:600;
+  font-size:clamp(1.1rem,2.4vw,1.7rem);
+  color:var(--ink);line-height:1.5;
+  border-left:3px solid var(--gold);
+  padding-left:clamp(.8rem,1.6vw,1.4rem);
+  margin-top:var(--content-gap);
+  max-width:30em;
+}
+.quote .hl{color:var(--gold);}
+
+/* ============================================================
+   页脚 OPC 动机角标 + 页码
+   ============================================================ */
+.slide-foot{
+  position:absolute;left:0;right:0;bottom:0;z-index:3;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding:clamp(.9rem,2vh,1.6rem) var(--slide-padding);
+  gap:1rem;pointer-events:none;
+}
+.opc{
+  font-size:var(--small-size);color:var(--ink-dim);
+  display:flex;align-items:center;gap:.5em;max-width:70%;
+  letter-spacing:.01em;
+}
+.opc::before{content:"↳";color:var(--gold);font-weight:700;font-size:1.2em;line-height:1;}
+.page-meta{
+  font-family:var(--font-latin);font-size:var(--small-size);
+  color:var(--ink-dim);display:flex;align-items:center;gap:.5em;white-space:nowrap;
+}
+.page-meta .shrimp{color:var(--gold);font-size:1.2em;}
+
+/* ============================================================
+   「当场练」徽章 + 跟练 callout
+   ============================================================ */
+.lab-badge{
+  position:absolute;top:clamp(1.2rem,3vh,2.2rem);right:var(--slide-padding);z-index:5;
+  display:inline-flex;align-items:center;gap:.45em;
+  font-family:var(--font-latin);font-weight:700;font-size:var(--small-size);
+  letter-spacing:.08em;
+  color:#1a1206;background:linear-gradient(135deg,var(--gold),#e3c074);
+  padding:.4em .9em;border-radius:999px;
+  box-shadow:0 6px 22px rgba(201,162,75,.35);
+}
+.lab-badge .dot{width:.5em;height:.5em;border-radius:50%;background:#1a1206;animation:pulse 1.8s infinite;}
+@keyframes pulse{0%,100%{opacity:.4;transform:scale(.8);}50%{opacity:1;transform:scale(1.15);}}
+
+.lab{
+  margin-top:var(--content-gap);
+  border:1px dashed rgba(201,162,75,.55);
+  background:linear-gradient(180deg,rgba(201,162,75,.10),rgba(201,162,75,.02));
+  border-radius:clamp(10px,1.2vw,16px);
+  padding:clamp(.7rem,1.4vw,1.1rem) clamp(.9rem,1.6vw,1.3rem);
+  display:flex;gap:.8em;align-items:flex-start;max-width:48em;
+}
+.lab .tag{
+  flex:none;font-family:var(--font-latin);font-weight:700;font-size:var(--small-size);
+  color:var(--gold);border:1px solid rgba(201,162,75,.5);border-radius:6px;
+  padding:.2em .55em;letter-spacing:.05em;white-space:nowrap;
+}
+.lab p{font-size:var(--small-size);color:var(--ink-soft);line-height:1.55;}
+.lab p b{color:var(--gold);}
+
+/* ============================================================
+   封面 / 收口 专属
+   ============================================================ */
+.cover .slide-content{justify-content:center;}
+.cover-title{
+  font-family:var(--font-display);font-weight:900;
+  font-size:var(--cover-title);line-height:1.02;letter-spacing:.005em;
+  color:var(--ink);
+}
+.cover-title .accent{
+  background:linear-gradient(120deg,var(--gold),#e9cf94);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.cover-sub{margin-top:var(--content-gap);font-size:clamp(1rem,2vw,1.5rem);color:var(--ink-soft);font-weight:500;}
+.cover-promise{
+  margin-top:var(--element-gap);font-size:var(--h2-size);color:var(--teal);font-weight:600;
+  display:inline-flex;align-items:center;gap:.5em;
+}
+.cover-promise::before{content:"";width:2px;height:1.1em;background:var(--teal);border-radius:2px;}
+
+/* 讲师常驻 */
+.byline{
+  position:absolute;left:var(--slide-padding);bottom:clamp(3.2rem,7vh,5.5rem);z-index:4;
+  display:flex;align-items:center;gap:.8em;
+}
+.byline .seal{
+  width:clamp(38px,4vw,52px);height:clamp(38px,4vw,52px);border-radius:12px;
+  border:1px solid var(--gold);display:grid;place-items:center;color:var(--gold);
+  background:var(--gold-soft);
+}
+.byline .who{font-size:var(--small-size);color:var(--ink-soft);line-height:1.4;}
+.byline .who b{color:var(--ink);font-weight:700;display:block;font-size:var(--body-size);}
+
+/* 虾 motif */
+.shrimp-svg{display:block;}
+.shrimp-mark{color:var(--gold);width:clamp(34px,3.4vw,50px);height:clamp(34px,3.4vw,50px);}
+.shrimp-mark.teal{color:var(--teal);}
+
+/* ============================================================
+   P03 六站地图
+   ============================================================ */
+.roadmap{display:flex;gap:clamp(.4rem,1vw,.9rem);margin-top:var(--content-gap);flex-wrap:wrap;}
+.station{
+  flex:1 1 150px;min-width:0;
+  background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;
+  padding:clamp(.7rem,1.3vw,1.1rem);position:relative;
+}
+.station .num{font-family:var(--font-latin);font-weight:700;font-size:var(--h2-size);color:var(--gold);}
+.station .nm{font-size:var(--small-size);color:var(--ink);font-weight:600;margin-top:.3em;font-family:var(--font-display);}
+.station .ds{font-size:var(--small-size);color:var(--ink-dim);margin-top:.25em;line-height:1.4;}
+
+/* ============================================================
+   P07 三区结构
+   ============================================================ */
+.zones{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(.7rem,1.4vw,1.3rem);margin-top:var(--content-gap);}
+.zone{border-radius:clamp(12px,1.4vw,18px);padding:clamp(.9rem,1.6vw,1.4rem);min-height:0;position:relative;overflow:hidden;}
+.zone .cap{font-family:var(--font-latin);font-weight:700;letter-spacing:.12em;font-size:var(--small-size);opacity:.85;}
+.zone h3{font-family:var(--font-display);font-size:var(--h2-size);font-weight:700;margin:.3em 0 .4em;}
+.zone p{font-size:var(--small-size);line-height:1.55;}
+.zone.left{background:linear-gradient(180deg,rgba(201,162,75,.16),rgba(201,162,75,.03));border:1px solid rgba(201,162,75,.4);color:#f3e6c8;}
+.zone.left .cap{color:var(--gold);}
+.zone.mid{background:linear-gradient(180deg,rgba(63,182,176,.16),rgba(63,182,176,.03));border:1px solid rgba(63,182,176,.4);color:#d6f3f1;}
+.zone.mid .cap{color:var(--teal);}
+.zone.right{background:linear-gradient(180deg,rgba(53,96,146,.30),rgba(53,96,146,.05));border:1px solid rgba(120,160,210,.4);color:#dbe7f5;}
+.zone.right .cap{color:#9cc0e8;}
+.zone .ico{width:clamp(28px,2.6vw,38px);height:clamp(28px,2.6vw,38px);margin-bottom:.5em;}
+.zone-mnemonic{
+  margin-top:var(--content-gap);text-align:center;
+  font-family:var(--font-display);font-size:clamp(1rem,2vw,1.5rem);color:var(--ink);
+}
+.zone-mnemonic b{color:var(--gold);}
+.zone-mnemonic .t{color:var(--teal);}
+
+/* ============================================================
+   P13–P17 模式卡 / 流程 / 决策树
+   ============================================================ */
+.mode-row{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(.7rem,1.4vw,1.3rem);margin-top:var(--content-gap);}
+.mode{
+  border-radius:clamp(12px,1.4vw,18px);padding:clamp(.9rem,1.6vw,1.4rem);
+  border:1px solid var(--line);background:rgba(255,255,255,.04);position:relative;overflow:hidden;
+}
+.mode .en{font-family:var(--font-latin);font-weight:700;letter-spacing:.1em;font-size:var(--h2-size);}
+.mode .cn{font-family:var(--font-display);font-weight:700;font-size:var(--body-size);margin-top:.2em;color:var(--ink-soft);}
+.mode p{font-size:var(--small-size);color:var(--ink-soft);margin-top:.6em;line-height:1.5;}
+.mode.craft{border-color:rgba(201,162,75,.45);background:linear-gradient(180deg,rgba(201,162,75,.12),rgba(201,162,75,.02));}
+.mode.craft .en{color:var(--gold);}
+.mode.plan{border-color:rgba(63,182,176,.45);background:linear-gradient(180deg,rgba(63,182,176,.12),rgba(63,182,176,.02));}
+.mode.plan .en{color:var(--teal);}
+.mode.ask{border-color:rgba(120,160,210,.45);background:linear-gradient(180deg,rgba(120,160,210,.12),rgba(120,160,210,.02));}
+.mode.ask .en{color:#9cc0e8;}
+
+/* 模式 hero（P14/P15/P16） */
+.mode-hero{display:flex;gap:clamp(1rem,2vw,2rem);align-items:center;margin-top:var(--content-gap);flex-wrap:wrap;}
+.mode-hero .big{
+  font-family:var(--font-latin);font-weight:700;font-size:clamp(2.2rem,6vw,4rem);line-height:1;
+  background:linear-gradient(120deg,var(--gold),#e9cf94);-webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.mode-hero.plan .big{background:linear-gradient(120deg,var(--teal),#9fe6e1);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.mode-hero.ask .big{background:linear-gradient(120deg,#9cc0e8,#cfe2f5);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.mode-hero .cn{font-family:var(--font-display);font-weight:700;font-size:var(--h2-size);}
+.mode-hero .desc{font-size:var(--body-size);color:var(--ink-soft);max-width:26em;line-height:1.55;}
+
+.chips{display:flex;flex-wrap:wrap;gap:.6em;margin-top:var(--content-gap);}
+.chip{
+  font-size:var(--small-size);color:var(--ink-soft);
+  border:1px solid var(--line);border-radius:999px;padding:.4em .9em;
+  background:rgba(255,255,255,.03);
+}
+.chip b{color:var(--gold);}
+
+/* 流程步骤（P15 Plan） */
+.flow{display:flex;align-items:stretch;gap:.4em;margin-top:var(--content-gap);flex-wrap:wrap;}
+.step{
+  flex:1 1 130px;min-width:0;text-align:center;
+  border:1px solid var(--line);border-radius:12px;padding:.8em .6em;
+  background:rgba(255,255,255,.04);
+}
+.step .n{font-family:var(--font-latin);font-weight:700;color:var(--teal);font-size:var(--small-size);}
+.step .t{font-size:var(--small-size);color:var(--ink);font-weight:600;margin-top:.3em;}
+.step .d{font-size:var(--small-size);color:var(--ink-dim);margin-top:.2em;line-height:1.4;}
+.arrow{display:grid;place-items:center;color:var(--gold);font-size:1.2em;align-self:center;flex:none;}
+
+/* 决策树（P17） */
+.tree{display:grid;grid-template-columns:1.1fr 2.4fr;gap:clamp(.8rem,1.6vw,1.4rem);margin-top:var(--content-gap);align-items:stretch;}
+.tree .root{
+  display:flex;flex-direction:column;justify-content:center;
+  border:1px solid var(--gold);border-radius:14px;padding:1.1rem;
+  background:linear-gradient(180deg,rgba(201,162,75,.14),rgba(201,162,75,.02));
+}
+.tree .root .lbl{font-family:var(--font-latin);font-size:var(--small-size);letter-spacing:.1em;color:var(--gold);}
+.tree .root .big{font-family:var(--font-display);font-weight:700;font-size:var(--h2-size);margin-top:.3em;}
+.tree .branches{display:flex;flex-direction:column;gap:.6rem;}
+.branch{display:flex;gap:.8em;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:.7em .9em;background:rgba(255,255,255,.04);}
+.branch .mk{font-family:var(--font-latin);font-weight:700;flex:none;font-size:var(--h2-size);}
+.branch.craft .mk{color:var(--gold);}
+.branch.plan .mk{color:var(--teal);}
+.branch.ask .mk{color:#9cc0e8;}
+.branch .txt{font-size:var(--small-size);color:var(--ink-soft);line-height:1.5;}
+.branch .txt b{color:var(--ink);}
+.tree-default{margin-top:var(--element-gap);font-size:var(--small-size);color:var(--teal);display:flex;align-items:center;gap:.5em;}
+.tree-default::before{content:"●";font-size:.7em;}
+
+/* ============================================================
+   P18 知识库/记忆力 双环
+   ============================================================ */
+.dual{display:grid;grid-template-columns:1fr auto 1fr;gap:clamp(.6rem,1.4vw,1.2rem);align-items:center;margin-top:var(--content-gap);}
+.dual .panel{border-radius:clamp(12px,1.4vw,18px);padding:clamp(.9rem,1.6vw,1.3rem);border:1px solid var(--line);background:rgba(255,255,255,.04);}
+.dual .panel.kb{border-color:rgba(201,162,75,.42);background:linear-gradient(180deg,rgba(201,162,75,.10),rgba(201,162,75,.02));}
+.dual .panel.mem{border-color:rgba(63,182,176,.42);background:linear-gradient(180deg,rgba(63,182,176,.10),rgba(63,182,176,.02));}
+.dual .panel h3{font-family:var(--font-display);font-size:var(--h2-size);font-weight:700;}
+.dual .panel.kb h3{color:var(--gold);}
+.dual .panel.mem h3{color:var(--teal);}
+.dual .panel p{font-size:var(--small-size);color:var(--ink-soft);margin-top:.5em;line-height:1.55;}
+.dual .bridge{display:flex;flex-direction:column;align-items:center;color:var(--ink-dim);font-size:var(--small-size);}
+.dual .bridge .ring{width:clamp(40px,4vw,56px);height:clamp(40px,4vw,56px);color:var(--gold);margin-bottom:.4em;}
+
+/* ============================================================
+   P19 我的 五要素
+   ============================================================ */
+.icons-wall{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(.5rem,1.2vw,1.1rem);margin-top:var(--content-gap);}
+.tile{
+  text-align:center;border:1px solid var(--line);border-radius:14px;padding:clamp(.8rem,1.4vw,1.2rem) .6rem;
+  background:rgba(255,255,255,.04);transition:transform .4s var(--ease),border-color .4s var(--ease);
+}
+.tile:hover{transform:translateY(-4px);border-color:var(--line-strong);}
+.tile .emoji{font-size:clamp(1.6rem,3vw,2.4rem);display:block;line-height:1;margin-bottom:.4em;}
+.tile .nm{font-size:var(--small-size);color:var(--ink);font-weight:600;}
+.tile .ds{font-size:var(--small-size);color:var(--ink-dim);margin-top:.2em;line-height:1.4;}
+
+/* ============================================================
+   P20 收口
+   ============================================================ */
+.takeaways{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(.7rem,1.4vw,1.3rem);margin-top:var(--content-gap);}
+.takeaway{border:1px solid var(--line);border-radius:14px;padding:clamp(.8rem,1.4vw,1.2rem);background:rgba(255,255,255,.04);}
+.takeaway .n{font-family:var(--font-latin);font-weight:700;color:var(--gold);font-size:var(--h2-size);}
+.takeaway .t{font-family:var(--font-display);font-weight:700;font-size:var(--body-size);color:var(--ink);margin-top:.3em;}
+.takeaway .d{font-size:var(--small-size);color:var(--ink-dim);margin-top:.3em;line-height:1.45;}
+.next-chip{
+  display:inline-flex;align-items:center;gap:.6em;margin-top:var(--content-gap);
+  border:1px solid var(--teal);border-radius:999px;padding:.5em 1.1em;
+  background:var(--teal-soft);color:var(--teal);font-weight:600;font-size:var(--small-size);
+}
+.next-chip .lbl{font-family:var(--font-latin);letter-spacing:.08em;opacity:.85;}
+
+/* ============================================================
+   进度条 + 导航点
+   ============================================================ */
+.progress-bar{position:fixed;top:0;left:0;height:3px;width:0;z-index:50;background:linear-gradient(90deg,var(--gold),var(--teal));transition:width .35s var(--ease);}
+.nav-dots{position:fixed;right:clamp(.6rem,1.4vw,1.3rem);top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:.5em;}
+.nav-dots button{width:10px;height:10px;border-radius:50%;border:1px solid var(--ink-dim);background:transparent;cursor:pointer;padding:0;transition:all .3s var(--ease);}
+.nav-dots button.active{background:var(--gold);border-color:var(--gold);transform:scale(1.35);box-shadow:0 0 0 4px var(--gold-soft);}
+.keyboard-hint{position:fixed;bottom:.8rem;left:50%;transform:translateX(-50%);z-index:50;font-size:var(--small-size);color:var(--ink-dim);font-family:var(--font-latin);letter-spacing:.05em;display:flex;gap:1em;align-items:center;opacity:.7;}
+.keyboard-hint kbd{border:1px solid var(--line-strong);border-radius:5px;padding:.1em .45em;color:var(--ink-soft);background:rgba(255,255,255,.04);}
+
+/* ============================================================
+   PRINT / PDF 导出样式
+   保持深蓝背景图形、横向、无边距；每页一屏。
+   ============================================================ */
+@media print{
+  @page{size:1280px 720px;margin:0;}
+  html,body{overflow:visible!important;height:auto!important;scroll-snap-type:none!important;background:#0e2238;}
+  *,*::before,*::after{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  .slide{width:1280px;height:720px;page-break-after:always;break-after:page;scroll-snap-align:start;}
+  .slide:last-child{page-break-after:auto;}
+  .progress-bar,.nav-dots,.keyboard-hint{display:none!important;}
+  .reveal,.reveal-left,.reveal-scale{opacity:1!important;transform:none!important;}
+
+  /* ---- v2.4 打印修正：防止截图/概念图撑爆卡片并溢出页面 ---- */
+  .shot-card,
+  .shot-hero .shot-card,
+  .shot-single .shot-card,
+  .shot-single.compact .shot-card{
+    height:220px!important;max-height:220px!important;min-height:0!important;
+    overflow:hidden!important;box-sizing:border-box!important;padding:0.4rem!important;
+    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;
+  }
+  .shot-hero .shot-card{height:300px!important;max-height:300px!important;}
+  .shot-single .shot-card{height:260px!important;max-height:260px!important;}
+  .shot-single.compact .shot-card{height:160px!important;max-height:160px!important;}
+  .shot-card img{
+    width:100%!important;height:auto!important;max-height:calc(100% - 1.5rem)!important;
+    object-fit:contain!important;object-position:center top!important;display:block!important;flex:none!important;
+  }
+  .shot-row,.shot-hero,.shot-single{
+    width:100%!important;max-width:min(92%,1100px)!important;margin-left:auto!important;margin-right:auto!important;margin-top:0.8rem!important;
+  }
+  .shot-row.two{grid-template-columns:1fr 1fr!important;}
+  .shot-row.three{grid-template-columns:1fr 1fr 1fr!important;}
+  .shot-hero{grid-template-columns:1.1fr 1fr!important;}
+  .shot-card .shot-label{margin-top:0.2rem!important;font-size:0.75rem!important;flex:none!important;}
+}
+
+/* ============================================================
+   演讲者模式 PRESENTER MODE（按 P / ?presenter=1 进入）
+   普通模式隐藏，仅讲师可见；不含任何外部资源。
+   ============================================================ */
+#presenter{
+  position:fixed; inset:0; z-index:200; display:none;
+  background:linear-gradient(160deg,#0b1d30 0%,#0a1626 100%);
+  color:var(--ink); font-family:var(--font-body);
+}
+#presenter.open{ display:grid; grid-template-rows:auto 1fr auto; }
+#presenter *{ box-sizing:border-box; }
+.pv-bar{ display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.7rem 1.3rem; border-bottom:1px solid var(--line); }
+.pv-bar .pv-course{ font-family:var(--font-display); font-weight:700; font-size:var(--h2-size); }
+.pv-bar .pv-course .tag{ font-family:var(--font-latin); font-size:var(--small-size); color:var(--gold); letter-spacing:.12em; margin-left:.6em; }
+.pv-bar .pv-hint{ font-size:var(--small-size); color:var(--ink-dim); display:flex; gap:.8em; align-items:center; flex-wrap:wrap; }
+.pv-bar .pv-hint kbd{ border:1px solid var(--line-strong); border-radius:5px; padding:.1em .45em; color:var(--ink-soft); background:rgba(255,255,255,.04); font-family:var(--font-latin); }
+.pv-body{ display:grid; grid-template-columns:1.55fr 1fr; gap:1.1rem; padding:1.1rem 1.3rem; min-height:0; }
+.pv-current{ display:flex; flex-direction:column; min-height:0; gap:.6rem; }
+.pv-frame{ position:relative; overflow:hidden; border:1px solid var(--line-strong); border-radius:14px; background:#0a1626; }
+.pv-current .pv-frame{ flex:1; min-height:0; }
+.pv-stage{ position:absolute; top:0; left:0; width:100vw; height:100vh; transform-origin:top left;
+  background:
+    radial-gradient(1200px 800px at 12% 8%, rgba(53,96,146,.35), transparent 60%),
+    radial-gradient(1000px 700px at 92% 96%, rgba(63,182,176,.12), transparent 55%),
+    radial-gradient(900px 600px at 78% 12%, rgba(201,162,75,.10), transparent 55%),
+    linear-gradient(160deg,var(--navy-800) 0%,var(--navy-900) 55%,#0a1c30 100%);
+}
+.pv-stage .reveal,.pv-stage .reveal-left,.pv-stage .reveal-scale{ opacity:1!important; transform:none!important; }
+.pv-label{ font-size:var(--small-size); color:var(--ink-soft); display:flex; align-items:center; gap:.7em; }
+.pv-label .pv-pagenum{ font-family:var(--font-latin); color:var(--gold); font-weight:700; }
+.pv-side{ display:grid; grid-template-rows:auto 1fr; gap:1.1rem; min-height:0; }
+.pv-nextwrap{ display:flex; flex-direction:column; gap:.4rem; }
+.pv-nextwrap .pv-frame{ height:clamp(120px,22vh,230px); }
+.pv-nextlabel{ font-size:var(--small-size); color:var(--ink-dim); }
+.pv-notes{ border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.03); padding:1rem 1.15rem; overflow:auto; min-height:0; display:flex; flex-direction:column; }
+.pv-notes h4{ font-family:var(--font-latin); font-size:var(--small-size); letter-spacing:.14em; color:var(--gold); text-transform:uppercase; margin-bottom:.6em; flex:none; }
+.pv-notes .script{ white-space:pre-wrap; line-height:1.75; font-size:var(--body-size); color:var(--ink); }
+.pv-notes .script strong{ color:var(--gold); font-weight:700; }
+.pv-hints{ margin-top:.9rem; border-top:1px dashed var(--line); padding-top:.7rem; display:flex; flex-direction:column; gap:.5em; }
+.pv-hint-line{ font-size:var(--small-size); line-height:1.55; }
+.pv-hint-line.pv-trans{ color:var(--teal); }
+.pv-hint-line.pv-lab{ color:var(--ink-soft); }
+.pv-timer{ display:flex; align-items:center; gap:1.8rem; padding:.7rem 1.3rem; border-top:1px solid var(--line); font-family:var(--font-latin); }
+.pv-timer .t-block{ display:flex; flex-direction:column; }
+.pv-timer .t-label{ font-size:var(--small-size); color:var(--ink-dim); letter-spacing:.06em; }
+.pv-timer .t-val{ font-size:clamp(1.25rem,2.6vw,1.9rem); font-weight:700; font-variant-numeric:tabular-nums; color:var(--ink); }
+.pv-actions{ margin-left:auto; display:flex; gap:.6rem; flex-wrap:wrap; }
+.pv-btn{ font-family:var(--font-body); font-size:var(--small-size); color:var(--ink); background:rgba(255,255,255,.06); border:1px solid var(--line-strong); border-radius:9px; padding:.5em .9em; cursor:pointer; transition:all .2s var(--ease); }
+.pv-btn:hover{ background:rgba(255,255,255,.12); border-color:var(--gold); }
+.pv-btn.primary{ background:linear-gradient(135deg,var(--gold),#e3c074); color:#1a1206; border-color:transparent; font-weight:700; }
+.pv-btn.primary:hover{ filter:brightness(1.05); }
+@media (max-width:880px){
+  .pv-body{ grid-template-columns:1fr; grid-template-rows:auto auto; overflow:auto; }
+  .pv-current .pv-frame{ height:42vh; flex:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- 进度条 -->
+<div class="progress-bar" id="progress"></div>
+<!-- 导航点 -->
+<nav class="nav-dots" id="navDots" aria-label="幻灯片导航"></nav>
+<!-- 翻页提示 -->
+<div class="keyboard-hint" id="hint">
+  <span><kbd>←</kbd><kbd>→</kbd> 翻页</span><span><kbd>Space</kbd> 下一页</span><span>滑动 / 点击圆点</span><span><kbd>P</kbd> 演讲者模式</span>
+</div>
+
+<main class="deck" id="deck">
+
+<!-- ============ P01 封面 ============ -->
+<section class="slide cover" data-id="p01" data-section="开场" data-title="P01 · 封面">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">课0 · 新人第一讲 · WorkBuddy 官方讲师团</span>
+    <h1 class="cover-title reveal" style="--d:.15s">workbuddy<br><span class="accent">初认识</span></h1>
+    <p class="cover-sub reveal" style="--d:.3s">一小时，从「装上都还没打开」到「能亲手用起来」。</p>
+    <p class="cover-promise reveal" style="--d:.45s">跟着我边听边点，一小时后你就是能带它出门的人 🦐</p>
+  </div>
+  <div class="byline reveal" style="--d:.6s">
+    <div class="seal">
+      <svg class="shrimp-svg shrimp-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 44 C12 30 20 16 36 14 C50 12 56 24 47 32 C40 38 30 33 31 25"/>
+        <path d="M20 44 L11 50 M20 44 L13 40 M20 44 L9 43"/>
+        <path d="M36 14 C44 8 54 8 60 14"/>
+        <circle cx="33" cy="20" r="2.2" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+    <div class="who"><b>一宏 · 阮伟钰</b>主讲人 / 官方对外讲师团</div>
+  </div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.7s">↳ 跟对人、认对课，一小时从「装好」到「能上手」</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 01 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P02 主讲人介绍（is_lab） ============ -->
+<section class="slide" data-id="p02" data-section="开场" data-title="P02 · 主讲人介绍">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="lab-badge"><span class="dot"></span>当场练</div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P02 · 主讲人介绍</span>
+    <h2 class="slide-title reveal" style="--d:.15s">讲这门课的人，<span class="hl">真懂产品也真懂实战</span></h2>
+    <div class="reveal" style="--d:.3s;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:var(--content-gap);">
+      <div style="display:flex;align-items:center;gap:.8rem;">
+        <div class="seal" style="width:clamp(48px,5vw,64px);height:clamp(48px,5vw,64px);border-radius:14px;border:1px solid var(--gold);display:grid;place-items:center;color:var(--gold);background:var(--gold-soft);">
+          <svg class="shrimp-svg shrimp-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 44 C12 30 20 16 36 14 C50 12 56 24 47 32 C40 38 30 33 31 25"/><path d="M20 44 L11 50 M20 44 L13 40 M20 44 L9 43"/><path d="M36 14 C44 8 54 8 60 14"/><circle cx="33" cy="20" r="2.2" fill="currentColor" stroke="none"/></svg>
+        </div>
+        <div><div style="font-family:var(--font-display);font-weight:900;font-size:clamp(1.4rem,3vw,2.2rem);">一宏 · 阮伟钰</div><div style="color:var(--ink-soft);font-size:var(--small-size);">官方对外讲师团 · 主讲人</div></div>
+      </div>
+    </div>
+    <!-- 头衔矩阵卡 -->
+    <div class="cards reveal" style="--d:.45s">
+      <div class="card gold"><h3>原阿里 B2B</h3><p>增值业务渠道运营负责人</p></div>
+      <div class="card gold"><h3>创业者</h3><p>北京成长型社交平台创始人</p></div>
+      <div class="card gold"><h3>数字化转型顾问</h3><p>滴滴 · 兑吧 · 颖通</p></div>
+      <div class="card gold"><h3>AI 社群创建人</h3><p>天天拿 WorkBuddy 帮人解决问题</p></div>
+    </div>
+    <p class="quote reveal" style="--d:.6s">不是产品经理念说明书，是<span class="hl">天天拿它干活的人</span>，把你领进门。</p>
+    <div class="lab reveal" style="--d:.7s">
+      <span class="tag">练</span>
+      <p><b>破冰举手：</b>在座多少人今天第一次听说 WorkBuddy？举手示意——「这一小时就是为你们准备的」。</p>
+    </div>
+  </div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.8s">↳ 信得过的人领进门，上手焦虑先减半</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 02 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P03 本节地图 ============ -->
+<section class="slide" data-id="p03" data-section="开场" data-title="P03 · 本节地图">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P03 · 本节地图</span>
+    <h2 class="slide-title reveal" style="--d:.15s">六站路线，<span class="hl">讲完立刻让你动手</span></h2>
+    <p class="body reveal" style="--d:.3s">一节课 60 分钟，我们分六站走。每一站，我都讲完立刻让你动手——把未知变可控。</p>
+    <div class="roadmap">
+      <div class="station reveal" style="--d:.4s"><div class="num">01</div><div class="nm">装好登入</div><div class="ds">把工具装进设备并登入</div></div>
+      <div class="station reveal" style="--d:.5s"><div class="num">02</div><div class="nm">界面三区</div><div class="ds">左中右各司其职</div></div>
+      <div class="station reveal" style="--d:.6s"><div class="num">03</div><div class="nm">配置成你的</div><div class="ds">调成懂你的助手</div></div>
+      <div class="station reveal" style="--d:.7s"><div class="num">04</div><div class="nm">三种模式</div><div class="ds">Craft / Plan / Ask 怎么选</div></div>
+      <div class="station reveal" style="--d:.8s"><div class="num">05</div><div class="nm">记住你</div><div class="ds">知识库与记忆力</div></div>
+      <div class="station reveal" style="--d:.9s"><div class="num">06</div><div class="nm">我的</div><div class="ds">你的资产与成长</div></div>
+    </div>
+  </div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:1s">↳ 先有全局地图，听讲不迷路</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 03 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P04 为什么先认识再用（is_lab） ============ -->
+<section class="slide" data-id="p04" data-section="开场" data-title="P04 · 为什么先「认识」再「用」">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="lab-badge"><span class="dot"></span>当场练</div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P04 · 为什么先「认识」再「用」</span>
+    <h2 class="slide-title reveal" style="--d:.15s">终局，是带它<span class="hl">走出去交付价值</span></h2>
+    <p class="body reveal" style="--d:.3s">这套训练，终局是让你们<strong>带着 WorkBuddy 走出去，给真实的商铺、真实的人交付价值</strong>。但前提——工具你先得玩明白。</p>
+    <p class="body reveal" style="--d:.42s">我见过太多人第一次打开就卡在「登录不上」「找不到对话框」「选错模式白干半小时」。今天这一课，就是把所有<span class="g">「第一次的坑」提前替你踩完</span>。</p>
+    <p class="quote reveal" style="--d:.58s">工具顺手，才能把<span class="hl">脑子</span>用在真正重要的事上。</p>
+    <div class="lab reveal" style="--d:.72s">
+      <span class="tag">练</span>
+      <p><b>现场提问：</b>明天去校门口一家店用 WorkBuddy 做海报，你最大的不确定是什么？（收 2–3 个回答，埋下后续板块伏笔）</p>
+    </div>
+  </div>
+  
+  <div class="shot-single compact reveal" style="--d:.6s"><div class="shot-card"><img src="./assets/P04.png" alt="终局：带着它走出去，给校门口真实的商铺交付价值"><div class="shot-label">终局：带着它走出去，给校门口真实的商铺交付价值</div></div></div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.85s">↳ 工具顺手，脑子才用在该用的地方（本节金句）</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 04 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P05 安装注册登入 步骤（is_lab） ============ -->
+<section class="slide" data-id="p05" data-section="一·安装注册登入" data-title="P05 · 板块一 · 安装注册登入（步骤）">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="lab-badge"><span class="dot"></span>当场练</div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P05 · 板块一 · 安装注册登入</span>
+    <h2 class="slide-title reveal" style="--d:.15s">跨端互通：<span class="hl">挑你顺手的</span></h2>
+    <p class="body reveal" style="--d:.3s">桌面客户端 / 网页版 / App，三种方式<strong>数据互通</strong>。把「拥有它」拆成三步可勾选清单，降低第一步门槛。</p>
+    <div class="cards reveal" style="--d:.45s">
+      <div class="card gold"><h3>① 获取</h3><p>到官方渠道拿到安装包 / 打开网页版</p></div>
+      <div class="card teal"><h3>② 安装</h3><p>按提示完成安装，保持版本更新</p></div>
+      <div class="card"><h3>③ 登入</h3><p>手机号或账号走流程，扫码 / 验证码确认身份</p></div>
+    </div>
+    <p class="quote reveal" style="--d:.6s">安全验证<span class="hl">别跳过</span>——它关系你「我的」里的资产安全。</p>
+    <div class="lab reveal" style="--d:.72s">
+      <span class="tag">练</span>
+      <p><b>当场做：</b>所有人现在打开 WorkBuddy，完成登入，截图或举手示意「我进来了」，讲师巡场确保无人卡在门口。</p>
+    </div>
+  </div>
+  
+  <div class="shot-hero reveal" style="--d:.55s">
+  <div class="text-col">
+    <p class="quote" style="margin:0">下载页长这样：认准官方渠道，别从第三方装。</p>
+  </div>
+  <div class="shot-card"><img src="./assets/P5.png" alt="WorkBuddy 下载页面"></div>
+</div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.85s">↳ 跑客户前，工具必须装好登入</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 05 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P06 常见坑 ============ -->
+<section class="slide" data-id="p06" data-section="一·安装注册登入" data-title="P06 · 安装注册登入 · 常见坑">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P06 · 安装注册登入 · 常见坑</span>
+    <h2 class="slide-title reveal" style="--d:.15s">三个高频坑，<span class="hl">我得提醒你</span></h2>
+    <div class="cards reveal" style="--d:.3s">
+      <div class="card"><h3>网络环境</h3><p>公司 / 校园网有时拦截——<b>换手机热点往往就通了</b>。</p></div>
+      <div class="card"><h3>版本过旧</h3><p>客户端记得保持更新，<b>老版本会缺功能</b>。</p></div>
+      <div class="card"><h3>账号混淆</h3><p>用工作号还是个人号，<b>今天定下来</b>，别明天换号记忆全丢。</p></div>
+    </div>
+    <p class="quote reveal" style="--d:.5s">预防性排错——出门<span class="hl">不掉线</span>。</p>
+  </div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.65s">↳ 踩过的坑提前避，出门不掉线</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 06 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P07 界面三区（is_lab） ============ -->
+<section class="slide" data-id="p07" data-section="二·界面" data-title="P07 · 板块二 · 界面总览（三区结构）">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="lab-badge"><span class="dot"></span>当场练</div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P07 · 板块二 · 界面总览</span>
+    <h2 class="slide-title reveal" style="--d:.15s">界面像<span class="hl">驾驶舱</span>，三区各司其职</h2>
+    <div class="zones">
+      <div class="zone left reveal" style="--d:.3s">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <div class="cap">LEFT · 能力</div>
+        <h3>左侧 · 工具 / 任务栏</h3>
+        <p>技能、专家、历史对话——你的军火库。</p>
+      </div>
+      <div class="zone mid reveal" style="--d:.42s">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.3 7.3L4 20l1-4.7A8 8 0 1 1 21 12z"/></svg>
+        <div class="cap">CENTER · 沟通</div>
+        <h3>中间 · 对话区</h3>
+        <p>你下指令、看它思考、跟它来回的地方。</p>
+      </div>
+      <div class="zone right reveal" style="--d:.54s">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 21h8"/></svg>
+        <div class="cap">RIGHT · 成果</div>
+        <h3>右侧 · 产出物预览</h3>
+        <p>网页 / PPT / 文档 / 图片 / 表格，直接在这看。</p>
+      </div>
+    </div>
+    <p class="zone-mnemonic reveal" style="--d:.66s">一句话记住：左边管<b>能力</b>，中间管<span class="t">沟通</span>，右边管<b>成果</b>。</p>
+    <div class="lab reveal" style="--d:.78s">
+      <span class="tag">练</span>
+      <p><b>指读三区：</b>在屏幕上用手指 / 鼠标指一遍左中右三区，口头说出每区干嘛。</p>
+    </div>
+  </div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.9s">↳ 看不懂界面，后面全是浪费时间</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 07 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P08 左侧（工具/任务栏） ============ -->
+<section class="slide" data-id="p08" data-section="二·界面" data-title="P08 · 界面 · 左侧（工具 / 任务栏）">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P08 · 界面 · 左侧</span>
+    <h2 class="slide-title reveal" style="--d:.15s">左侧是你的<span class="hl">军火库</span></h2>
+    <div class="cards reveal" style="--d:.3s">
+      <div class="card gold"><h3>技能 Skill</h3><p>现成专项能力——做图、做表、写文案，一键调用。</p></div>
+      <div class="card"><h3>专家</h3><p>更重的专业角色，适合复杂任务。</p></div>
+      <div class="card"><h3>任务栏 / 历史对话</h3><p>之前聊过什么、跑过什么任务，全在这回看。</p></div>
+    </div>
+    <p class="quote reveal" style="--d:.5s">新人不贪多——先把<span class="hl">「对话」用顺</span>，技能后面几课再解锁。</p>
+  </div>
+  
+  <div class="shot-row three reveal" style="--d:.55s">
+  <div class="shot-card"><img src="./assets/P8-技能.png" alt="技能面板"><div class="shot-label">技能 · 现成能力一键调用</div></div>
+  <div class="shot-card"><img src="./assets/P8-专家.png" alt="专家面板"><div class="shot-label">专家 · 复杂任务专业角色</div></div>
+  <div class="shot-card"><img src="./assets/P8-任务栏.png" alt="任务栏"><div class="shot-label">任务栏 · 历史对话与进程</div></div>
+</div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.65s">↳ 能力入口找得准，才不会乱点误事</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 08 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P09 中间对话区（is_lab） ============ -->
+<section class="slide" data-id="p09" data-section="二·界面" data-title="P09 · 界面 · 中间（对话区）">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="lab-badge"><span class="dot"></span>当场练</div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P09 · 界面 · 中间</span>
+    <h2 class="slide-title reveal" style="--d:.15s">用<span class="hl">自然语言</span>下指令</h2>
+    <ul class="points reveal" style="--d:.3s">
+      <li>可以<strong>打字</strong>，也能<strong>传文件、贴图片、发链接</strong>当上下文。</li>
+      <li>回复时你会看到它的<strong>思考过程与中间步骤</strong>——别慌，它在「干活」，不是卡了。</li>
+      <li>想纠正就<strong>接着说</strong>，像跟同事聊天一样。</li>
+      <li>多说一句：说清<strong>背景 + 目标 + 约束</strong>，结果天差地别（下一课专门讲）。</li>
+    </ul>
+    <div class="lab reveal" style="--d:.55s">
+      <span class="tag">练</span>
+      <p><b>破除陌生感：</b>在对话区打一句「你好，你是谁」，看它怎么回。</p>
+    </div>
+  </div>
+  
+  <div class="shot-hero reveal" style="--d:.55s">
+  <div class="text-col">
+    <p class="quote" style="margin:0">真实对话区：输入框 + 上下文 + 工作空间选择。</p>
+  </div>
+  <div class="shot-card"><img src="./assets/P9.png" alt="WorkBuddy 对话区"></div>
+</div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.7s">↳ 会下指令，才敢跟客户现场演示</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 09 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P10 右侧预览区 ============ -->
+<section class="slide" data-id="p10" data-section="二·界面" data-title="P10 · 界面 · 右侧（产出物预览区）">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P10 · 界面 · 右侧</span>
+    <h2 class="slide-title reveal" style="--d:.15s">右边是你的<span class="hl">成果展厅</span></h2>
+    <p class="body reveal" style="--d:.3s">WorkBuddy 生成的网页、PPT、文档、图片、表格，会直接在这里预览。</p>
+    <div class="cards reveal" style="--d:.45s">
+      <div class="card teal"><h3>预览区不是终点</h3><p>它是<strong>验收台</strong>——看效果，不对就回到中间说「第几页改成…」。</p></div>
+      <div class="card"><h3>生成 → 预览 → 纠偏</h3><p>给商户交付，靠的就是这一套闭环。</p></div>
+    </div>
+    <p class="quote reveal" style="--d:.6s">它干完的活，去哪看？<span class="hl">右边</span>。</p>
+  </div>
+  
+  <div class="shot-row two reveal" style="--d:.65s">
+  <div class="shot-card"><img src="./assets/P10-产出物.png" alt="产出物列表"><div class="shot-label">Step 1 · 生成产物列表</div></div>
+  <div class="shot-card"><img src="./assets/P10-纠偏.png" alt="预览与纠偏"><div class="shot-label">Step 2 · 预览 → 直接说「改第几页」</div></div>
+</div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.72s">↳ 验收台用熟，交付才不出错</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 10 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P11 配置远程助理/个性化（is_lab） ============ -->
+<section class="slide" data-id="p11" data-section="三·配置与个性化" data-title="P11 · 板块三 · 配置远程助理 / 个性化设置">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="lab-badge"><span class="dot"></span>当场练</div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P11 · 板块三 · 配置与个性化</span>
+    <h2 class="slide-title reveal" style="--d:.15s">把<span class="hl">出厂设置</span>变成<span class="teal">你的助手</span></h2>
+    <div class="cards reveal" style="--d:.3s">
+      <div class="card teal"><h3>远程助理</h3><p>云上分身——不在电脑前也能被调用、接消息、跑自动化。</p></div>
+      <div class="card gold"><h3>个性化</h3><p>调性格 / 默认模式 / 语言，一次设置长期生效。</p></div>
+    </div>
+    <p class="quote reveal" style="--d:.5s">建议默认模式先设 <span class="hl">Craft</span>——新人最稳的起点。</p>
+    <div class="lab reveal" style="--d:.62s">
+      <span class="tag">练</span>
+      <p><b>当场做：</b>进入设置，把「默认工作模式」先设为 Craft（你说我做）。</p>
+    </div>
+  </div>
+  
+  <div class="shot-row two reveal" style="--d:.65s">
+  <div class="shot-card"><img src="./assets/P11-助手.png" alt="远程助理设置"><div class="shot-label">远程助理 · 云上分身</div></div>
+  <div class="shot-card"><img src="./assets/P11-个性化.png" alt="个性化设置"><div class="shot-label">个性化 · 风格 / 默认模式</div></div>
+</div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.75s">↳ 调成「你的」助手，每次打开都顺手</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 11 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P12 个性化细节 ============ -->
+<section class="slide" data-id="p12" data-section="三·配置与个性化" data-title="P12 · 个性化设置 · 细节提示">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P12 · 个性化设置 · 细节提示</span>
+    <h2 class="slide-title reveal" style="--d:.15s">几个我强烈建议<span class="hl">现在就动</span>的</h2>
+    <ul class="points reveal" style="--d:.3s">
+      <li><strong>通知与隐私</strong>——决定远程时它能否给你推消息。</li>
+      <li><strong>记忆开关</strong>——是否允许它记住你的偏好（下一站细讲）。</li>
+      <li><strong>默认输出语言 / 格式</strong>——常交中文稿，就别让它默认英文。</li>
+    </ul>
+    <p class="quote reveal" style="--d:.5s">这些不是炫技，是让你<span class="hl">少说废话、它少猜你的意思</span>。</p>
+  </div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.65s">↳ 早设早省心，少说废话多干活</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 12 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P13 三大模式总览 ============ -->
+<section class="slide" data-id="p13" data-section="四·3大工作模式" data-title="P13 · 板块四 · 3 大工作模式（总览）">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P13 · 板块四 · 3 大工作模式</span>
+    <h2 class="slide-title reveal" style="--d:.15s">三种「工作性格」，对应不同任务</h2>
+    <div class="mode-row">
+      <div class="mode craft reveal" style="--d:.3s">
+        <div class="en">CRAFT</div><div class="cn">你说我做</div>
+        <p>你下指令，它<strong>立刻执行</strong>。适合目标清楚的小事。</p>
+      </div>
+      <div class="mode plan reveal" style="--d:.42s">
+        <div class="en">PLAN</div><div class="cn">先规划后执行</div>
+        <p>先出方案给你看，<strong>你认可了再干</strong>。适合复杂多步任务。</p>
+      </div>
+      <div class="mode ask reveal" style="--d:.54s">
+        <div class="en">ASK</div><div class="cn">只问不做</div>
+        <p>它<strong>只分析、不改动</strong>。适合只想听建议、不敢让它动时。</p>
+      </div>
+    </div>
+    <p class="quote reveal" style="--d:.68s">选对模式，效率翻倍；选错，要么<span class="hl">白等</span>，要么<span class="hl">白干</span>。</p>
+  </div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.8s">↳ 选对模式效率翻倍，选错白等白干</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 13 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P14 Craft（is_lab） ============ -->
+<section class="slide" data-id="p14" data-section="四·3大工作模式" data-title="P14 · 模式一 · Craft「你说我做」">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="lab-badge"><span class="dot"></span>当场练</div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P14 · 模式一 · Craft</span>
+    <div class="mode-hero craft reveal" style="--d:.15s">
+      <div class="big">CRAFT</div>
+      <div>
+        <div class="cn">你说我做</div>
+        <div class="desc">最常用默认模式。给一句清楚的话，它直接开干、给结果。</div>
+      </div>
+    </div>
+    <div class="chips reveal" style="--d:.3s">
+      <span class="chip">示例：<b>把这段文案改成朋友圈风格</b></span>
+      <span class="chip">示例：<b>生成一张咖啡店开业海报</b></span>
+    </div>
+    <p class="quote reveal" style="--d:.45s">适合<span class="hl">你已经想明白要什么</span>。若自己都模糊，用它易「做完了但不是你要的」。</p>
+    <div class="lab reveal" style="--d:.6s">
+      <span class="tag">练</span>
+      <p><b>实操：</b>用 Craft 模式发一句清晰指令（如改文案 / 生成海报），看它秒回。</p>
+    </div>
+  </div>
+  
+  <div class="shot-single compact reveal" style="--d:.6s"><div class="shot-card"><img src="./assets/P14.png" alt="实操：一句话说清，Craft 直接开干"><div class="shot-label">实操：一句话说清，Craft 直接开干</div></div></div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.72s">↳ 小事立刻干，别把时间耗在犹豫</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 14 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P15 Plan ============ -->
+<section class="slide" data-id="p15" data-section="四·3大工作模式" data-title="P15 · 模式二 · Plan「先规划后执行」">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P15 · 模式二 · Plan</span>
+    <div class="mode-hero plan reveal" style="--d:.15s">
+      <div class="big">PLAN</div>
+      <div>
+        <div class="cn">先规划后执行</div>
+        <div class="desc">给「大事」准备的。不直接做，先出步骤计划 / 方案，你点头才执行。</div>
+      </div>
+    </div>
+    <div class="flow reveal" style="--d:.3s">
+      <div class="step"><div class="n">01</div><div class="t">你提需求</div><div class="d">复杂多步任务</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="n">02</div><div class="t">Plan 出方案</div><div class="d">骨架先画出来</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="n">03</div><div class="t">你确认</div><div class="d">改两笔再跑</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="n">04</div><div class="t">执行产出</div><div class="d">省得推倒重来</div></div>
+    </div>
+    <p class="quote reveal" style="--d:.5s">新人记住：<span class="hl">拿不准就先 Plan，想清楚了再 Craft</span>。</p>
+  </div>
+  
+  <div class="shot-single compact reveal" style="--d:.6s"><div class="shot-card"><img src="./assets/P15.png" alt="先规划再执行，复杂任务不翻车"><div class="shot-label">先规划再执行，复杂任务不翻车</div></div></div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.65s">↳ 大事先对齐，做完不推倒重来</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 15 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P16 Ask ============ -->
+<section class="slide" data-id="p16" data-section="四·3大工作模式" data-title="P16 · 模式三 · Ask「只问不做」">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P16 · 模式三 · Ask</span>
+    <div class="mode-hero ask reveal" style="--d:.15s">
+      <div class="big">ASK</div>
+      <div>
+        <div class="cn">只问不做</div>
+        <div class="desc">最特别——只分析、不改动任何东西。给判断，但绝不替你改文件、不替你发消息。</div>
+      </div>
+    </div>
+    <div class="cards reveal" style="--d:.3s">
+      <div class="card"><h3>只读 · 无副作用</h3><p>「这份合同有没有风险」「这个方案行不行」——它给判断，绝不动手。</p></div>
+      <div class="card teal"><h3>安全顾问</h3><p>改老板文档前，先问 Ask 一遍「哪里要改」，心里有数了再换 Craft 去改。</p></div>
+    </div>
+    <p class="quote reveal" style="--d:.5s">当你<span class="hl">还不敢让它动手</span>的时候，Ask 是你的安全选项。</p>
+  </div>
+  
+  <div class="shot-single compact reveal" style="--d:.6s"><div class="shot-card"><img src="./assets/P16.png" alt="只问不做：先把问题想透、问准"><div class="shot-label">只问不做：先把问题想透、问准</div></div></div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.65s">↳ 不敢动时，有安全顾问兜底</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 16 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P17 决策树（is_lab） ============ -->
+<section class="slide" data-id="p17" data-section="四·3大工作模式" data-title="P17 · 3 大模式 · 怎么选（决策树）">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="lab-badge"><span class="dot"></span>当场练</div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P17 · 3 大模式 · 怎么选</span>
+    <h2 class="slide-title reveal" style="--d:.15s">任务来了，<span class="hl">点哪个？</span></h2>
+    <div class="tree">
+      <div class="root reveal" style="--d:.3s">
+        <div class="lbl">TASK IN</div>
+        <div class="big">任务来了</div>
+        <div style="font-size:var(--small-size);color:var(--ink-dim);margin-top:.4em;">先问自己：想清楚了吗？事大吗？敢让它动吗？</div>
+      </div>
+      <div class="branches">
+        <div class="branch craft reveal" style="--d:.42s"><div class="mk">Craft</div><div class="txt"><b>想清楚了要什么</b> → 直接干，立刻执行。</div></div>
+        <div class="branch plan reveal" style="--d:.54s"><div class="mk">Plan</div><div class="txt"><b>事大、步骤多、怕跑偏</b> → 先对齐，出方案再跑。</div></div>
+        <div class="branch ask reveal" style="--d:.66s"><div class="mk">Ask</div><div class="txt"><b>只想听判断、不敢让它动</b> → 只问不做。</div></div>
+      </div>
+    </div>
+    <div class="tree-default reveal" style="--d:.78s">拿不准？默认从 Plan 起步最稳——最多多花两分钟看方案，绝不做错方向。</div>
+    <div class="lab reveal" style="--d:.9s">
+      <span class="tag">练</span>
+      <p><b>快速问答：</b>给老板做年度总结 → 选 Plan；把口号翻成英文 → 选 Craft。</p>
+    </div>
+  </div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:1s">↳ 拿不准就先 Plan，绝不做错方向</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 17 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P18 知识库/记忆力（is_lab） ============ -->
+<section class="slide" data-id="p18" data-section="五·知识库/记忆力" data-title="P18 · 板块五 · 知识库 / 记忆力">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="lab-badge"><span class="dot"></span>当场练</div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P18 · 板块五 · 知识库 / 记忆力</span>
+    <h2 class="slide-title reveal" style="--d:.15s">让它<span class="hl">记住你</span>，少交代一遍背景</h2>
+    <div class="dual">
+      <div class="panel kb reveal" style="--d:.3s">
+        <h3>知识库</h3>
+        <p>上传文件（文档 / 表格 / 资料）建库，它基于这些资料回答——像给助手发了参考资料。</p>
+      </div>
+      <div class="bridge reveal" style="--d:.4s">
+        <svg class="ring" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="5"/></svg>
+        <span>越用<br>越懂你</span>
+      </div>
+      <div class="panel mem reveal" style="--d:.5s">
+        <h3>记忆力</h3>
+        <p>记住你的偏好与约定——爱用中文、这家店卖奶茶、讨厌夸大宣传。下次不用重说。</p>
+      </div>
+    </div>
+    <p class="quote reveal" style="--d:.62s">实操建议：<span class="hl">项目资料进知识库，个人习惯开记忆力</span>。</p>
+    <div class="lab reveal" style="--d:.74s">
+      <span class="tag">练</span>
+      <p><b>当场做：</b>打开「记忆」开关（呼应 P12），并说「记住：我是做校园周边商户服务的」测试它。</p>
+    </div>
+  </div>
+  
+  <div class="shot-row two reveal" style="--d:.68s">
+  <div class="shot-card"><img src="./assets/P18-知识库.png" alt="ima 知识库"><div class="shot-label">知识库 · 上传资料让它基于资料回答</div></div>
+  <div class="shot-card"><img src="./assets/P18-记忆.png" alt="管理记忆"><div class="shot-label">记忆力 · 记住偏好与约定</div></div>
+</div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.86s">↳ 让它记住你，每次少交代一遍背景</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 18 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P19 我的（is_lab） ============ -->
+<section class="slide" data-id="p19" data-section="六·我的" data-title="P19 · 板块六 · 我的">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="lab-badge"><span class="dot"></span>当场练</div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P19 · 板块六 · 我的</span>
+    <h2 class="slide-title reveal" style="--d:.15s">「我的」，是你在这款产品里的<span class="hl">家</span></h2>
+    <div class="icons-wall">
+      <div class="tile reveal" style="--d:.3s"><span class="emoji">💰</span><div class="nm">积分余额</div><div class="ds">用得越多积分越多</div></div>
+      <div class="tile reveal" style="--d:.4s"><span class="emoji">🔥</span><div class="nm">热门活动</div><div class="ds">玩法 / 赛事 / 福利</div></div>
+      <div class="tile reveal" style="--d:.5s"><span class="emoji">🧾</span><div class="nm">消耗清单</div><div class="ds">每笔花在哪都清楚</div></div>
+      <div class="tile reveal" style="--d:.6s"><span class="emoji">🎯</span><div class="nm">新手任务</div><div class="ds">跟着做快速解锁</div></div>
+      <div class="tile reveal" style="--d:.7s"><span class="emoji">🦐</span><div class="nm">虾伙伴</div><div class="ds">陪你从新手到老手</div></div>
+    </div>
+    <p class="quote reveal" style="--d:.82s">简单说：<span class="hl">「我的」管你的资产、你的成长、你的伙伴</span>。</p>
+    <div class="lab reveal" style="--d:.92s">
+      <span class="tag">练</span>
+      <p><b>点开「新手任务」：</b>挑一个现在就能完成的（如「完成首次对话」）。</p>
+    </div>
+  </div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:1s">↳ 摸清「我的」，积分成长伙伴都在这</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 19 / 20</div>
+  </footer>
+</section>
+
+<!-- ============ P20 收口（is_lab） ============ -->
+<section class="slide" data-id="p20" data-section="收口" data-title="P20 · 收口 · 本节回顾与下一课预告">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="lab-badge"><span class="dot"></span>当场练</div>
+  <div class="slide-content">
+    <span class="kicker reveal" style="--d:.05s">P20 · 收口 · 本节回顾</span>
+    <h2 class="slide-title reveal" style="--d:.15s">今天你至少带走<span class="hl">三件事</span></h2>
+    <div class="takeaways">
+      <div class="takeaway reveal" style="--d:.3s"><div class="n">01</div><div class="t">装好并登入</div><div class="d">工具在你手里了。</div></div>
+      <div class="takeaway reveal" style="--d:.42s"><div class="n">02</div><div class="t">摸清界面三区</div><div class="d">左能力、中沟通、右成果。</div></div>
+      <div class="takeaway reveal" style="--d:.54s"><div class="n">03</div><div class="t">认全 3 大模式</div><div class="d">Craft / Plan / Ask，知何时点哪个。</div></div>
+    </div>
+    <div class="next-chip reveal" style="--d:.66s"><span class="lbl">NEXT</span> 下一课 · 提示词工程：把一句话说清楚</div>
+    <div class="lab reveal" style="--d:.78s">
+      <span class="tag">练</span>
+      <p><b>毕业动作：</b>用 Craft 模式对它说「介绍一下你自己」。<b>课后任务：</b>把今天学的三区画一张草图发群里。</p>
+    </div>
+  </div>
+  
+  <div class="shot-single compact reveal" style="--d:.6s"><div class="shot-card"><img src="./assets/P20.png" alt="带走三件事，下一课接着用"><div class="shot-label">带走三件事，下一课接着用</div></div></div>
+  <footer class="slide-foot">
+    <div class="opc reveal" style="--d:.9s">↳ 带走三件事，下一课接着用</div>
+    <div class="page-meta"><span class="shrimp">🦐</span> 20 / 20</div>
+  </footer>
+</section>
+
+</main>
+
+<!-- ============ 演讲者模式覆盖层（普通模式隐藏） ============ -->
+<div id="presenter" aria-hidden="true">
+  <div class="pv-bar">
+    <div class="pv-course">workbuddy 初认识 · 课0 <span class="tag">PRESENTER</span></div>
+    <div class="pv-hint">
+      <span><kbd>←</kbd><kbd>→</kbd> 翻页</span>
+      <span><kbd>R</kbd> 重置计时</span>
+      <span><kbd>Esc</kbd> 退出</span>
+      <span><kbd>P</kbd> 开关</span>
+    </div>
+  </div>
+  <div class="pv-body">
+    <div class="pv-current">
+      <div class="pv-frame" id="pvCurrentFrame"></div>
+      <div class="pv-label" id="pvCurrentLabel"></div>
+    </div>
+    <div class="pv-side">
+      <div class="pv-nextwrap">
+        <div class="pv-frame" id="pvNextFrame"></div>
+        <div class="pv-nextlabel" id="pvNextLabel"></div>
+      </div>
+      <div class="pv-notes">
+        <h4>讲师逐字稿</h4>
+        <div class="script" id="pvScript"></div>
+        <div class="pv-hints" id="pvHints"></div>
+      </div>
+    </div>
+  </div>
+  <div class="pv-timer">
+    <div class="t-block"><span class="t-label">本页时长</span><span class="t-val" id="pvPageVal">00:00</span></div>
+    <div class="t-block"><span class="t-label">总时长</span><span class="t-val" id="pvTotalVal">00:00</span></div>
+    <div class="pv-actions">
+      <button class="pv-btn" id="pvPrev">‹ 上一页</button>
+      <button class="pv-btn primary" id="pvNext">下一页 ›</button>
+      <button class="pv-btn" id="pvReset">重置计时</button>
+      <button class="pv-btn" id="pvClose">退出</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   SLIDE PRESENTATION CONTROLLER
+   - 键盘 / 滚轮 / 触摸 / 导航点 翻页
+   - IntersectionObserver 触发 reveal 动效（进入即播放）
+   - 进度条 + 导航点状态同步
+   ============================================================ */
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const navDots = document.getElementById('navDots');
+  let current = 0;
+  let wheelLock = false;
+
+  /* 构建导航点（先清空，避免重复） */
+  navDots.innerHTML = '';
+  slides.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.setAttribute('aria-label', '第 ' + (i+1) + ' 页');
+    b.addEventListener('click', () => goTo(i));
+    navDots.appendChild(b);
+  });
+  const dots = Array.from(navDots.children);
+
+  function updateUI(){
+    progress.style.width = ((current + 1) / total * 100) + '%';
+    dots.forEach((d, i) => d.classList.toggle('active', i === current));
+  }
+
+  function goTo(index){
+    index = Math.max(0, Math.min(total - 1, index));
+    current = index;
+    slides[index].scrollIntoView({behavior: 'smooth', block: 'start'});
+    updateUI();
+    if(presenterOpen) presenterRefresh();
+  }
+
+  /* 键盘导航 */
+  document.addEventListener('keydown', (e) => {
+    switch(e.key){
+      case 'ArrowDown': case 'ArrowRight': case ' ': case 'PageDown':
+        e.preventDefault(); goTo(current + 1); break;
+      case 'ArrowUp': case 'ArrowLeft': case 'PageUp':
+        e.preventDefault(); goTo(current - 1); break;
+      case 'Home': e.preventDefault(); goTo(0); break;
+      case 'End': e.preventDefault(); goTo(total - 1); break;
+    }
+  });
+
+  /* 滚轮导航（带节流，避免连跳） */
+  window.addEventListener('wheel', (e) => {
+    if(wheelLock) return;
+    if(Math.abs(e.deltaY) < 12) return;
+    wheelLock = true;
+    goTo(current + (e.deltaY > 0 ? 1 : -1));
+    setTimeout(() => { wheelLock = false; }, 700);
+  }, {passive: true});
+
+  /* 触摸滑动 */
+  let touchY = null;
+  window.addEventListener('touchstart', (e) => { touchY = e.touches[0].clientY; }, {passive: true});
+  window.addEventListener('touchend', (e) => {
+    if(touchY === null) return;
+    const dy = touchY - e.changedTouches[0].clientY;
+    if(Math.abs(dy) > 45){ goTo(current + (dy > 0 ? 1 : -1)); }
+    touchY = null;
+  }, {passive: true});
+
+  /* IntersectionObserver：进入视口加 .visible，离开移除（便于重复播放） */
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      const idx = slides.indexOf(entry.target);
+      if(entry.isIntersecting){
+        entry.target.classList.add('visible');
+        if(idx !== -1) current = idx;
+        updateUI();
+      } else {
+        entry.target.classList.remove('visible');
+      }
+    });
+  }, {threshold: 0.55});
+  slides.forEach(s => io.observe(s));
+
+  /* 初始状态 */
+  updateUI();
+  slides[0].classList.add('visible');
+
+  /* ============================================================
+     演讲者模式 PRESENTER MODE
+     - 逐字稿（口播）逐字取自 speaker_intent.md，按 p01–p20 对齐
+     - 学生产出 / 过渡 取自 slide_plan.json 与 speaker_intent.md
+     - 预览用「克隆 + transform 缩放」，像素一致且零外部资源
+     ============================================================ */
+  const PRESENTER_NOTES = {
+    p01: { script: `欢迎来到 WorkBuddy 的第一课——**workbuddy 初认识**。接下来的一个小时，我不打算跟你讲一堆概念，而是带你把这款产品，从「装上都还没打开」到「能亲手用起来」。你只要跟着我，边听边点，一小时后你就是能带它出门的人。`, transition: `但在开始之前，先认识一下今天带你入门的人。`, lab: `` },
+    p02: { script: `我是**一宏，阮伟钰**。过去这些年，我做过**原阿里 B2B 增值业务渠道运营负责人**，也创过业——是**北京一家成长型社交平台的创始人**。后来给**滴滴、兑吧、颖通**做过**数字化转型咨询顾问**，一路看着企业怎么被工具和 AI 重塑。\n现在，我更重要的一个身份，是 **AI 社群的创建人**——我每天都在用 WorkBuddy 帮真实的人解决真实的问题。所以今天这堂课，不是产品经理念说明书，而是一个**天天拿它干活的人，把你领进门**。`, transition: `那我们为什么不直接上手，而要先用一整节课「认识」它？`, lab: `破冰举手：在座多少人今天第一次听说 WorkBuddy？举手示意，「这一小时就是为你们准备的」。` },
+    p03: { script: `一节课 60 分钟，我们分六站走：先**装好登入**，再看清**界面三区**，然后**配置成你自己的助手**，接着搞懂**三种工作模式**怎么选，再学会让它**记住你**，最后认识**「我的」**里那些你的资产。每一站，我都讲完立刻让你动手。`, transition: `先回答一个最根本的问题——为什么是「先认识」，而不是「直接用」？`, lab: `` },
+    p04: { script: `我们这套训练，终局是让你们**带着 WorkBuddy 走出去，给真实的商铺、真实的人交付价值**。但有个前提——工具你自己得先玩明白。\n我见过太多人，第一次打开就卡在「登录不上」「找不到对话框」「选错模式白干半小时」。今天这一课，就是把所有这些「第一次的坑」提前替你踩完。等会儿你们出门，工具是顺手的，脑子是清楚的。`, transition: `好，第一站——先把它装进你的电脑 / 手机，并登入。`, lab: `现场提问：明天去校门口一家店用 WorkBuddy 做海报，你最大的不确定是什么？（收 2–3 答，埋下后续板块伏笔）` },
+    p05: { script: `WorkBuddy 是跨端的。你可以用**桌面客户端**，也可以用**网页版**，手机上同样能登入。三种方式，数据互通，挑你顺手的。\n安装完成后，第一次打开会让你**注册或登入**——用手机号或已有账号走一遍流程，过程中可能需要**扫码或验证码**确认身份。这一步别跳过安全验证，它关系到你后面「我的」里的资产安全。`, transition: `进来了？那几个最容易在这步翻车的地方，我得提醒你。`, lab: `当场做：所有人现在打开 WorkBuddy，完成登入，截图或举手示意「我进来了」，讲师巡场确保无人卡在门口。` },
+    p06: { script: `三个高频坑：第一，**网络环境**——公司 / 校园网有时拦截，换手机热点往往就通了；第二，**版本过旧**——客户端记得保持更新，老版本会缺功能；第三，**账号混淆**——用工作号还是个人号，今天定下来，别明天换一个号，之前的记忆全丢了。`, transition: `登入成功，你看到的第一个画面，就是它的「界面」。这是下一站的重点。`, lab: `` },
+    p07: { script: `WorkBuddy 的界面，记住**三个区**就够了，像驾驶舱一样分工明确：\n- **左侧**：你的**工具与任务栏**——技能、专家、历史对话都在这。\n- **中间**：**对话区**——你在这里下指令、看它思考、跟它来回。\n- **右侧**：**产出物预览区**——它生成的网页、文档、图片、表格，直接在这看、在这改。\n\n一句话：**左边管「能力」，中间管「沟通」，右边管「成果」**。`, transition: `我们从左往右，把每个区拆开看。`, lab: `指读三区：在屏幕上用手指 / 鼠标指一遍左中右三区，口头说出每区干嘛。` },
+    p08: { script: `左侧是你的**军火库**。这里能找到：\n- **技能（Skill）**：现成的专项能力，比如做图、做表、写文案，一键调用；\n- **专家**：更重的专业角色，适合复杂任务；\n- **任务栏 / 历史对话**：你之前聊过什么、跑过什么任务，全在这回看。\n\n新人不贪多——先把「对话」用顺，技能等你后面几课再解锁。`, transition: `能力准备好，真正的对话发生在中间。`, lab: `` },
+    p09: { script: `中间是你们待最久的地方。你用**自然语言**下指令，可以打字，也可以**传文件、贴图片、发链接**当上下文。\n它回复时，你会看到它的**思考过程**和**中间步骤**——别慌，这是它在「干活」，不是卡了。想纠正，就在下面**接着说**，像跟同事聊天一样。\n这里多说一句：同样一句话，说清楚「背景 + 目标 + 约束」，它给的东西天差地别。这个我们**下一课专门讲**。`, transition: `它干完的活，去哪看？右边。`, lab: `破除陌生感：在对话区打一句「你好，你是谁」，看它怎么回。` },
+    p10: { script: `右边是你的**成果展厅**。WorkBuddy 生成的网页、PPT、文档、图片、表格，会直接在这里预览。\n重点来了——**预览区不是终点，是验收台**。你在这看效果，觉得不对，回到中间对话区说「第几页改成…」，它就地改。等会儿你们给商户交付，靠的就是这一套「生成 → 预览 → 纠偏」的闭环。`, transition: `界面摸清了。但现在是「出厂设置」的它——接下来，让它变成「你的」助手。`, lab: `` },
+    p11: { script: `WorkBuddy 不只是一个本地工具，它还能配置**远程助理**——简单说，就是让你的助手**不在电脑前也能被调用**、能接消息、能替你跑一些自动化。\n而**个性化设置**，是把它的「性格」和「习惯」调成你的偏好：比如默认语言、默认工作模式、回复风格。配置一次，之后每次打开都是「懂你的版本」。`, transition: `个性化里最该先定的，就是「它平时用哪种方式干活」。这就引出我们的第四站——3 大工作模式。`, lab: `当场做：进入设置，把「默认工作模式」先设为 Craft（新人最稳起点）。` },
+    p12: { script: `几个我强烈建议现在就动的：\n1. **通知与隐私**——决定它能不能在远程时给你推消息；\n2. **记忆开关**——是否允许它记住你的偏好（下一站细讲）；\n3. **默认输出语言 / 格式**——你常交中文稿，就别让它默认英文。\n\n这些不是炫技，是**让你少说废话、它少猜你的意思**。`, transition: `好，现在你有了「自己的助手」。但它干活有几种「性格」？这就是 3 大模式。`, lab: `` },
+    p13: { script: `WorkBuddy 有三种「工作性格」，对应你不同的任务：\n- **Craft「你说我做」**：你下指令，它**立刻执行**，适合目标清楚的小事。\n- **Plan「先规划后执行」**：它先**出方案给你看**，你认可了再干，适合复杂多步任务。\n- **Ask「只问不做」**：它**只分析、不改动**，适合你只想听建议、不敢让它动的时候。\n\n选对模式，效率翻倍；选错，要么白等，要么白干。`, transition: `一个一个拆。`, lab: `` },
+    p14: { script: `**Craft** 是最常用的默认模式。你给一句清楚的话，它直接开干、给结果。\n比如：「帮我把这段文案改成朋友圈风格」「生成一张咖啡店开业海报」。目标越清楚，它越准。\n⚠️ 注意：Craft 适合**你已经想明白要什么**。如果你自己都模糊，用它容易「做完了但不是你要的」——那种情况，看下一个模式。`, transition: `那如果我还没想清楚，怎么办？`, lab: `实操：用 Craft 模式发一句清晰指令（如改文案 / 生成海报），看它秒回。` },
+    p15: { script: `**Plan** 模式，是给「大事」准备的。你抛一个复杂需求，它**不直接做**，而是先给你一份**步骤计划 / 方案**，你点头，它才执行。\n比如「帮我校门口奶茶店做一个完整的线上推广方案」——这种多步、易跑偏的任务，先让它在 Plan 里把骨架画出来，你改两笔，再跑，省得做完推倒重来。\n新人记住一句话：**拿不准就先 Plan，想清楚了再 Craft。**`, transition: `还有一种情况——你根本不想让它动，只想听它说。`, lab: `` },
+    p16: { script: `**Ask** 模式最特别——它**只分析、不改动任何东西**。你问它「这份合同有没有风险」「这个方案行不行」，它给判断，但**绝不替你改文件、不替你发消息**。\n什么时候用？当你还**不敢让它动手**的时候。比如改老板的文档前，先问 Ask 一遍「哪里要改」，心里有数了，再换 Craft 去改。它是你的「安全顾问」。`, transition: `三种模式都认识了，那到底每次该点哪个？`, lab: `` },
+    p17: { script: `送你一句口诀，记牢：\n- **想清楚了要什么** → **Craft**，直接干；\n- **事大、步骤多、怕跑偏** → **Plan**，先对齐；\n- **只想听判断、不敢让它动** → **Ask**，只问不做。\n\n实在拿不准，默认从 **Plan** 起步最稳——它最多让你多花两分钟看方案，但绝不会做错方向。`, transition: `模式选对了，但它每次都得重新交代背景，累不累？下一站解决——让它记住你。`, lab: `快速问答：给老板做年度总结 → 选 Plan；把口号翻成英文 → 选 Craft。` },
+    p18: { script: `WorkBuddy 有两个「记忆」：\n- **知识库**：你**上传文件**（文档、表格、资料），它建库后就能基于这些资料回答，像给助手发了参考资料；\n- **记忆力**：它**记住你的偏好和约定**——比如你爱用中文、你这家店卖奶茶、你讨厌夸大宣传。下次不用重说。\n\n实操建议：把你们小组的**项目资料传进知识库**，把**个人习惯开进记忆力**。这样它越用越懂你，这就是「轻交付型助手」的底气。`, transition: `最后，带你认识「我的」——你在这款产品里的一切，都在这。`, lab: `当场做：打开「记忆」开关（呼应 P12），并说「记住：我是做校园周边商户服务的」测试它。` },
+    p19: { script: `点开**「我的」**，是你在这款产品里的「家」：\n- **积分余额**：你用得越多、贡献越多，积分越多；\n- **热门活动**：官方不定期的玩法、赛事、福利；\n- **积分消耗清单**：每一笔花在哪，清清楚楚；\n- **新手任务**：跟着做，快速解锁能力，别漏了；\n- 还有我们的**品牌伙伴——一只小虾的卡通形象**，陪你从新手到老手。\n\n简单说：**「我的」管你的资产、你的成长、你的伙伴**。`, transition: `一小时到了，我们收个口。`, lab: `点开「新手任务」，挑一个现在就能完成的（如「完成首次对话」）。` },
+    p20: { script: `今天这一小时，你至少带走了三件事：\n1. **装好并登入了 WorkBuddy**，工具在你手里了；\n2. **摸清了界面三区**——左能力、中沟通、右成果；\n3. **认全了 3 大模式**——Craft / Plan / Ask，知道什么时候点哪个。\n\n我们还配置了个性化、开了记忆、看了「我的」。\n\n**下一课**，我们不聊界面了，聊「怎么把一句话说清楚」——**提示词工程**。今天你在对话区随便打的那些话，下一课我会教你怎么打成「它能一次做对」的样子。\n\n现在，打开你的 WorkBuddy，跟我做最后一次：用 **Craft 模式**对它说——「介绍一下你自己」。做完的，今天的课，就算毕业了。`, transition: `结束——下课，去玩你的 WorkBuddy 吧。`, lab: `毕业动作：用 Craft 模式对它说「介绍一下你自己」；课后任务：把今天学的三区画一张草图发群里。` }
+  };
+
+  /* 把逐字稿写入每页 slide 的 data-notes（与 slide id 对齐） */
+  slides.forEach(s => {
+    const id = s.dataset.id;
+    if(PRESENTER_NOTES[id]) s.dataset.notes = PRESENTER_NOTES[id].script;
+  });
+
+  const pv = document.getElementById('presenter');
+  const pvCurrentFrame = document.getElementById('pvCurrentFrame');
+  const pvNextFrame = document.getElementById('pvNextFrame');
+  const pvCurrentLabel = document.getElementById('pvCurrentLabel');
+  const pvNextLabel = document.getElementById('pvNextLabel');
+  const pvScript = document.getElementById('pvScript');
+  const pvHints = document.getElementById('pvHints');
+  const pvNotes = pv.querySelector('.pv-notes');
+  const pvTotalVal = document.getElementById('pvTotalVal');
+  const pvPageVal = document.getElementById('pvPageVal');
+
+  let presenterOpen = false;
+  let presenterTotalStart = 0, presenterPageStart = 0, presenterTimerId = null;
+  let pvCurrentStage = null, pvNextStage = null;
+
+  function escapeHtml(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function renderScript(s){
+    let h = escapeHtml(s);
+    h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    return h;
+  }
+  function fmt(ms){
+    const t = Math.max(0, Math.floor(ms / 1000));
+    const m = Math.floor(t / 60), ss = t % 60;
+    return String(m).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
+  }
+  function fitStage(frame, stage){
+    const aw = frame.clientWidth, ah = frame.clientHeight;
+    if(!aw || !ah) return;
+    const iw = window.innerWidth, ih = window.innerHeight;
+    const s = Math.min(aw / iw, ah / ih);
+    const ox = (aw - s * iw) / 2, oy = (ah - s * ih) / 2;
+    stage.style.transform = 'translate(' + ox + 'px,' + oy + 'px) scale(' + s + ')';
+  }
+  function buildPreview(frame, slideEl, which){
+    frame.innerHTML = '';
+    const stage = document.createElement('div');
+    stage.className = 'pv-stage';
+    const clone = slideEl.cloneNode(true);
+    clone.classList.add('visible');
+    clone.removeAttribute('data-notes');
+    clone.style.margin = '0';
+    stage.appendChild(clone);
+    frame.appendChild(stage);
+    if(which === 'cur') pvCurrentStage = stage; else pvNextStage = stage;
+    fitStage(frame, stage);
+  }
+  function tickTimer(){
+    const now = Date.now();
+    pvTotalVal.textContent = fmt(now - presenterTotalStart);
+    pvPageVal.textContent = fmt(now - presenterPageStart);
+  }
+  function presenterRefresh(){
+    if(!presenterOpen) return;
+    const cur = slides[current];
+    const nxt = slides[current + 1] || null;
+    buildPreview(pvCurrentFrame, cur, 'cur');
+    pvCurrentLabel.innerHTML = '<span class="pv-pagenum">' + (current + 1) + ' / ' + total + '</span> ' + escapeHtml(cur.dataset.title || '');
+    if(nxt){
+      buildPreview(pvNextFrame, nxt, 'next');
+      pvNextLabel.textContent = '下一页 · ' + (current + 2) + ' / ' + total + ' · ' + (nxt.dataset.title || '');
+    } else {
+      pvNextFrame.innerHTML = '';
+      pvNextLabel.textContent = '已是最后一页';
+    }
+    const id = cur.dataset.id;
+    const note = PRESENTER_NOTES[id] || { script: '（暂无逐字稿）' };
+    pvScript.innerHTML = renderScript(note.script || '（暂无逐字稿）');
+    let hints = '';
+    if(note.transition) hints += '<div class="pv-hint-line pv-trans">➡️ 过渡：' + escapeHtml(note.transition) + '</div>';
+    if(note.lab) hints += '<div class="pv-hint-line pv-lab">💡 学生产出：' + escapeHtml(note.lab) + '</div>';
+    pvHints.innerHTML = hints;
+    presenterPageStart = Date.now();
+  }
+  function openPresenter(){
+    if(presenterOpen) return;
+    presenterOpen = true;
+    presenterTotalStart = Date.now();
+    presenterPageStart = Date.now();
+    pv.classList.add('open');
+    pv.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('presenter-active');
+    presenterRefresh();
+    if(presenterTimerId) clearInterval(presenterTimerId);
+    presenterTimerId = setInterval(tickTimer, 250);
+    tickTimer();
+  }
+  function closePresenter(){
+    if(!presenterOpen) return;
+    presenterOpen = false;
+    pv.classList.remove('open');
+    pv.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('presenter-active');
+    if(presenterTimerId){ clearInterval(presenterTimerId); presenterTimerId = null; }
+  }
+  function resetTimer(){
+    presenterTotalStart = Date.now();
+    presenterPageStart = Date.now();
+    tickTimer();
+  }
+
+  /* 按钮 */
+  document.getElementById('pvPrev').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('pvNext').addEventListener('click', () => goTo(current + 1));
+  document.getElementById('pvReset').addEventListener('click', resetTimer);
+  document.getElementById('pvClose').addEventListener('click', closePresenter);
+
+  /* 笔记区内部滚动不触发底层翻页 */
+  pvNotes.addEventListener('wheel', e => e.stopPropagation(), {passive:true});
+  pvNotes.addEventListener('touchstart', e => e.stopPropagation(), {passive:true});
+  pvNotes.addEventListener('touchmove', e => e.stopPropagation(), {passive:true});
+
+  /* 窗口缩放时重新适配预览缩放 */
+  window.addEventListener('resize', () => {
+    if(!presenterOpen) return;
+    if(pvCurrentStage) fitStage(pvCurrentFrame, pvCurrentStage);
+    if(pvNextStage) fitStage(pvNextFrame, pvNextStage);
+  });
+
+  /* 键盘：P 开关 / Esc 退出 / R 重置（翻页复用既有导航） */
+  document.addEventListener('keydown', (e) => {
+    const k = e.key;
+    if(k === 'p' || k === 'P'){ e.preventDefault(); presenterOpen ? closePresenter() : openPresenter(); return; }
+    if(presenterOpen){
+      if(k === 'Escape'){ e.preventDefault(); closePresenter(); return; }
+      if(k === 'r' || k === 'R'){ e.preventDefault(); resetTimer(); return; }
+    }
+  });
+
+  /* URL 参数 ?presenter=1 直接进入演讲者模式 */
+  try{
+    if(new URLSearchParams(location.search).get('presenter') === '1') openPresenter();
+  }catch(err){}
+})();
+</script>
+</body>
+</html>
