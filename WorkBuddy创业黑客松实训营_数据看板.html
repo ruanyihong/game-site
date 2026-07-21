@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WorkBuddy 创业黑客松实训营 · 数据看板</title>
+<style>
+  :root{
+    --bg:#0f1226; --panel:#171a35; --panel2:#1f2347; --line:#2c3160;
+    --txt:#eef1ff; --sub:#a7adcf; --muted:#7b81ab;
+    --indigo:#6366f1; --indigo2:#8b5cf6;
+    --gold:#f5b301; --silver:#c4ccd8; --bronze:#cd7f32;
+    --green:#22c55e; --pink:#ec4899; --cyan:#22d3ee;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"PingFang SC","Microsoft YaHei",-apple-system,system-ui,sans-serif;
+    background:radial-gradient(1200px 700px at 80% -10%,#2a2f63 0%,var(--bg) 55%);color:var(--txt);
+    line-height:1.6;padding:28px 20px 60px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto}
+  /* HERO */
+  .hero{position:relative;overflow:hidden;border-radius:22px;padding:30px 34px;
+    background:linear-gradient(120deg,#4f46e5 0%,#7c3aed 55%,#db2777 100%);
+    box-shadow:0 20px 60px rgba(80,50,200,.35)}
+  .hero::after{content:"";position:absolute;right:-60px;top:-60px;width:260px;height:260px;
+    background:radial-gradient(circle,rgba(255,255,255,.25),transparent 70%);border-radius:50%}
+  .hero h1{font-size:30px;letter-spacing:1px;font-weight:800}
+  .hero .sub{font-size:15px;opacity:.95;margin-top:6px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .chip{background:rgba(255,255,255,.16);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.25);
+    padding:6px 13px;border-radius:999px;font-size:13px;font-weight:600}
+  .chip b{font-weight:800}
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:22px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 14px}
+  .kpi .v{font-size:26px;font-weight:800;color:var(--indigo2)}
+  .kpi .l{font-size:12px;color:var(--sub);margin-top:4px}
+  .kpi.gold .v{color:var(--gold)} .kpi.green .v{color:var(--green)}
+  /* SECTION */
+  .sec{margin-top:30px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px 24px}
+  .sec h2{font-size:19px;font-weight:800;display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .sec h2 .dot{width:9px;height:9px;border-radius:50%;background:var(--indigo);box-shadow:0 0 12px var(--indigo)}
+  .sec .note{font-size:13px;color:var(--muted);margin-bottom:18px}
+  /* RANKING BARS */
+  .row{display:grid;grid-template-columns:54px 130px 1fr 70px;align-items:center;gap:12px;padding:7px 0}
+  .row .rk{font-weight:800;font-size:15px;text-align:center;color:var(--sub)}
+  .row .nm{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .nm small{display:block;color:var(--muted);font-weight:500;font-size:11px}
+  .bar{height:26px;border-radius:8px;background:linear-gradient(90deg,#3b3f7a,#5b5fae);position:relative;min-width:4px;
+    display:flex;align-items:center;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+  .bar .tip{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:#fff}
+  .row .sc{font-weight:800;font-size:15px;text-align:right}
+  .row.m1 .bar{background:linear-gradient(90deg,#b8860b,#f5b301)} .row.m1 .sc{color:var(--gold)}
+  .row.m2 .bar,.row.m3 .bar{background:linear-gradient(90deg,#8a93a3,#c4ccd8)} .row.m2 .sc,.row.m3 .sc{color:var(--silver)}
+  .row.m4 .bar,.row.m5 .bar,.row.m6 .bar{background:linear-gradient(90deg,#a05a22,#cd7f32)} .row.m4 .sc,.row.m5 .sc,.row.m6 .sc{color:var(--bronze)}
+  .row.medal .rk{color:#fff}
+  .badge{display:inline-block;font-size:10px;font-weight:800;padding:1px 7px;border-radius:6px;margin-left:6px;vertical-align:middle}
+  .b-gold{background:var(--gold);color:#3a2a00} .b-silver{background:var(--silver);color:#222}
+  .b-bronze{background:var(--bronze);color:#fff}
+  /* PODIUM */
+  .grid2{display:grid;grid-template-columns:1.1fr .9fr;gap:22px}
+  .pod{display:flex;justify-content:center;align-items:flex-end;gap:14px;margin-top:8px}
+  .pc{flex:1;max-width:180px;border-radius:14px 14px 0 0;padding:16px 10px 14px;text-align:center;position:relative}
+  .pc .medal{font-size:30px} .pc .pn{font-weight:800;font-size:16px;margin-top:6px}
+  .pc .ps{font-size:13px;opacity:.9;margin-top:2px} .pc .pp{font-size:12px;opacity:.8}
+  .pc.g{background:linear-gradient(180deg,#f5b301,#b8860b);color:#3a2a00;height:170px}
+  .pc.s{background:linear-gradient(180deg,#dfe6ef,#9aa3b2);color:#222;height:140px}
+  .pc.b{background:linear-gradient(180deg,#cd7f32,#8a5224);color:#fff;height:120px}
+  /* DIMENSION DONUT */
+  .donut{width:170px;height:170px;border-radius:50%;margin:6px auto 14px;
+    background:conic-gradient(var(--indigo) 0 50%,var(--indigo2) 50% 80%,var(--pink) 80% 100%)}
+  .legend{display:flex;flex-direction:column;gap:8px;font-size:13px}
+  .legend div{display:flex;align-items:center;gap:8px}
+  .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .dim-note{font-size:12.5px;color:var(--muted);margin-top:12px;line-height:1.7}
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  th,td{padding:9px 10px;text-align:center;border-bottom:1px solid var(--line)}
+  th{color:var(--sub);font-weight:700;font-size:12px;background:var(--panel2)}
+  td.nm{text-align:left;font-weight:600} td.nm small{color:var(--muted);font-weight:500}
+  .spark{display:inline-flex;gap:3px;align-items:flex-end;height:26px;vertical-align:middle}
+  .spark i{width:7px;background:var(--indigo);border-radius:2px;display:block}
+  /* TIMELINE */
+  .tl{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:6px}
+  .tlc{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--panel2)}
+  .tlc .d{font-size:12px;color:var(--cyan);font-weight:700}
+  .tlc h3{font-size:16px;margin:4px 0 8px}
+  .tlc ul{list-style:none;font-size:12.5px;color:var(--sub)} .tlc li{padding:3px 0;padding-left:14px;position:relative}
+  .tlc li::before{content:"▸";position:absolute;left:0;color:var(--indigo)}
+  .race{margin-top:10px;font-size:11.5px;color:var(--gold);font-weight:700}
+  /* AWARDS */
+  .aw{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:6px}
+  .awc{border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--panel2)}
+  .awc .t{font-weight:800;font-size:14px;display:flex;align-items:center;gap:7px}
+  .awc .d{font-size:12px;color:var(--sub);margin-top:5px}
+  footer{margin-top:30px;text-align:center;color:var(--muted);font-size:12px;line-height:1.8}
+  .pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:2px 9px;margin:2px}
+  @media(max-width:880px){.kpis{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}.tl,.aw{grid-template-columns:1fr}
+    .row{grid-template-columns:40px 100px 1fr 56px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <h1>WorkBuddy 创业黑客松实训营</h1>
+    <div class="sub">AI + OPC · 以赛代训 · 真实变现　|　数据看板 · Day 1 节点赛1「融资路演」</div>
+    <div class="chips">
+      <span class="chip">📍 地点 <b>宁波</b></span>
+      <span class="chip">📅 日期 <b>2026-07-22</b></span>
+      <span class="chip">⏱ 赛程 <b>3 天 · 3 场节点赛</b></span>
+      <span class="chip">🏆 奖牌席位 <b>6 席（金1 / 银2 / 铜3）</b></span>
+      <span class="chip">💰 通关线 <b>≥1 笔 9.9 元真实成交</b></span>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="sec">
+    <h2><span class="dot"></span>实时积分榜 · Day 1 节点赛1</h2>
+    <div class="note">计分规则：（痛点真实性×50% + 方案可行性×30% + 团队与组织力×20%）× 1.5，折算 15 分制。前三轮评分等权平均得出各组 Day 1 得分。满分 15 分。</div>
+    <div id="ranking"></div>
+  </div>
+
+  <div class="sec">
+    <div class="grid2">
+      <div>
+        <h2><span class="dot"></span>奖牌墙 · Top 6</h2>
+        <div class="note">按《比赛实施手册》奖项规则：总积分第 1 名金牌，第 2–3 名银牌，第 4–6 名铜牌。</div>
+        <div class="pod" id="pod"></div>
+      </div>
+      <div>
+        <h2><span class="dot"></span>Day 1 评分维度</h2>
+        <div class="note">节点赛1·融资路演 评委 5 维评分表（权重）</div>
+        <div class="donut"></div>
+        <div class="legend">
+          <div><span class="sw" style="background:var(--indigo)"></span>痛点真实性　<b>50%</b>　— 来自实地走访？有商户原话、照片证据</div>
+          <div><span class="sw" style="background:var(--indigo2)"></span>方案可行性　<b>30%</b>　— 3 个 SKU 用 WorkBuddy 真做得出来、定价</div>
+          <div><span class="sw" style="background:var(--pink)"></span>团队与组织力　<b>20%</b>　— 选对人、分好工、搞氛围</div>
+        </div>
+        <div class="dim-note">拿分诀窍（手册原话）：评委最容易扣分的一句话是「我们觉得商户应该需要」。把「我们觉得」换成「老板说」——痛点真实性占 50%，中午吃饭时多和老板聊两句，就是在挣分。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2><span class="dot"></span>评分明细 · 三轮评分与 Day 1 得分</h2>
+    <div class="note">三轮评分（评委轮次①②③）等权平均 = Day 1 得分。迷你柱为三轮得分对比。</div>
+    <table>
+      <thead><tr><th>排名</th><th>组别</th><th>组名</th><th>评分①</th><th>评分②</th><th>评分③</th><th>三轮对比</th><th>Day 1 得分</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2><span class="dot"></span>三天创业旅程</h2>
+    <div class="note">每天傍晚的节点赛，就是当天的「期末考」。</div>
+    <div class="tl">
+      <div class="tlc">
+        <div class="d">DAY 1 · 组队</div><h3>🏁 建司日</h3>
+        <ul><li>开营建司 + WorkBuddy 平台课</li><li>午餐「以吃代调」走访商户</li><li>建司工坊：生产公司三件套</li></ul>
+        <div class="race">节点赛1 · 融资路演 15 分 ✅ 今日</div>
+      </div>
+      <div class="tlc">
+        <div class="d">DAY 2 · 开张</div><h3>🏁 开张日</h3>
+        <ul><li>Skill 生产线课 + SKU 定稿</li><li>15:00 后封单核验</li><li>上街真实成交（≥9.9 元）</li></ul>
+        <div class="race">节点赛2 · 经营战报赛 25 分</div>
+      </div>
+      <div class="tlc">
+        <div class="d">DAY 3 · 上市</div><h3>🏁 上市日</h3>
+        <ul><li>12:00 封账仪式</li><li>数据复盘 + 路演彩排</li><li>IPO 总路演 + 颁奖</li></ul>
+        <div class="race">节点赛3 · IPO 总路演 40 分</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2><span class="dot"></span>奖项一览</h2>
+    <div class="note">同一公司可兼得团队奖与单项奖。有争议以作战文件夹里的凭证为准。</div>
+    <div class="aw">
+      <div class="awc"><div class="t">🥇🥈🥉 金/银/铜牌公司</div><div class="d">总积分第 1 名 / 2–3 名 / 4–6 名，全员保底结营认证。</div></div>
+      <div class="awc"><div class="t">💰 成交王</div><div class="d">累计真实营收最高的公司（销售额）。</div></div>
+      <div class="awc"><div class="t">🏆 最佳案例奖</div><div class="d">导师团提名，WorkBuddy 商业化最出彩。</div></div>
+      <div class="awc"><div class="t">⚡ 最佳 Skill 奖</div><div class="d">可申报腾讯 WorkBuddy 官方技能库。</div></div>
+      <div class="awc"><div class="t">🔥 最具人气公司</div><div class="d">三天课堂与小组氛围最佳，导师团评定。</div></div>
+      <div class="awc"><div class="t">✅ 全员保底</div><div class="d">完成三阶段交付 + ≥1 笔真实成交，即获官方结营认证。</div></div>
+    </div>
+  </div>
+
+  <footer>
+    数据来源：小组最终分数表（Day 1 节点赛1 融资路演）· 赛制依据《比赛实施手册》宁波 20260720 版。<br/>
+    <span class="pill">规则以组委会现场发布为准</span><span class="pill">积分每晚公示，异议当晚 24:00 前提出</span><br/>
+    生成时间：2026-07-22 · WorkBuddy 创业黑客松实训营数据看板
+  </footer>
+</div>
+
+<script>
+const groups = [
+  {rk:1, id:"第5组", name:"头脑风暴", s:[12.75,14.40,14.55], score:13.90},
+  {rk:2, id:"第7组", name:"香悦", s:[12.00,13.725,14.475], score:13.40},
+  {rk:3, id:"第11组", name:"景智", s:[10.05,13.425,14.475], score:12.65},
+  {rk:4, id:"第14组", name:"平海公司", s:[12.75,11.70,13.20], score:12.55},
+  {rk:5, id:"第13组", name:"小店增长官", s:[11.70,13.425,12.45], score:12.525},
+  {rk:6, id:"第10组", name:"伍进制", s:[10.80,13.275,12.825], score:12.30},
+  {rk:7, id:"第15组", name:"启和", s:[11.25,14.25,11.40], score:12.30},
+  {rk:8, id:"第2组", name:"Global", s:[11.10,12.825,12.75], score:12.225},
+  {rk:9, id:"第16组", name:"裕航", s:[13.20,12.45,10.875], score:12.175},
+  {rk:10, id:"第12组", name:"食亨AI", s:[10.95,14.25,10.275], score:11.825},
+  {rk:11, id:"第6组", name:"数萤", s:[11.25,13.65,10.425], score:11.775},
+  {rk:12, id:"第8组", name:"盈策", s:[11.25,13.125,9.75], score:11.375},
+  {rk:13, id:"第9组", name:"Five Spark", s:[10.95,12.75,9.90], score:11.20},
+  {rk:14, id:"第3组", name:"智萤", s:[10.50,12.225,10.80], score:11.175},
+  {rk:15, id:"第1组", name:"星芒", s:[11.10,10.50,11.85], score:11.15},
+  {rk:16, id:"第4组", name:"远航", s:[9.00,11.85,12.45], score:11.10},
+  {rk:17, id:"第18组", name:"渝蜀增长组", s:[10.95,9.60,12.30], score:10.95},
+  {rk:18, id:"第17组", name:"李宁童装", s:[12.00,9.975,9.225], score:10.40}
+];
+const FULL=15;
+const medalClass = r => r===1?"m1":(r<=3?"m2":(r<=6?"m3":(r<=6?"m4":"m5")));
+const tier = r => r===1?"m1":(r<=3?"m2":(r<=6?"m4":"x"));
+const badge = r => r===1?'<span class="badge b-gold">金牌</span>':(r<=3?'<span class="badge b-silver">银牌</span>':(r<=6?'<span class="badge b-bronze">铜牌</span>':''));
+
+// KPIs
+const scores = groups.map(g=>g.score);
+const avg = (scores.reduce((a,b)=>a+b,0)/scores.length);
+const maxG = groups[0];
+const kpis = [
+  {v:groups.length, l:"参赛小组", cls:""},
+  {v:FULL, l:"节点赛1满分(分)", cls:""},
+  {v:maxG.score.toFixed(2), l:"今日最高分 · "+maxG.name, cls:"gold"},
+  {v:avg.toFixed(2), l:"全组平均分", cls:""},
+  {v:"6", l:"奖牌席位(金1/银2/铜3)", cls:""},
+  {v:"≥9.9", l:"真实成交通关线(元)", cls:"green"}
+];
+document.getElementById('kpis').innerHTML = kpis.map(k=>
+  `<div class="kpi ${k.cls}"><div class="v">${k.v}</div><div class="l">${k.l}</div></div>`).join('');
+
+// Ranking bars
+document.getElementById('ranking').innerHTML = groups.map(g=>{
+  const w = (g.score/FULL*100).toFixed(1);
+  const t = tier(g.rk);
+  const mc = t==="m1"?"m1":(t==="m2"?"m2":(t==="m4"?"m4":""));
+  const medal = g.rk<=6?"medal":"";
+  return `<div class="row ${mc} ${medal}">
+    <div class="rk">${g.rk}</div>
+    <div class="nm">${g.name}${badge(g.rk)}<small>${g.id}</small></div>
+    <div class="bar" style="width:${w}%"><span class="tip">${g.score.toFixed(2)}</span></div>
+    <div class="sc">${g.score.toFixed(2)}</div>
+  </div>`;
+}).join('');
+
+// Podium (top 3)
+const podData = [
+  {cls:"s", emoji:"🥈", rk:"2–3", g:groups[1]},
+  {cls:"g", emoji:"🥇", rk:"1", g:groups[0]},
+  {cls:"b", emoji:"🥉", rk:"4–6", g:groups[2]}
+];
+document.getElementById('pod').innerHTML = podData.map(p=>
+  `<div class="pc ${p.cls}"><div class="medal">${p.emoji}</div>
+   <div class="pn">${p.g.name}</div><div class="ps">${p.g.score.toFixed(2)} 分</div>
+   <div class="pp">${p.g.id} · 名次 ${p.rk}</div></div>`).join('');
+
+// Detail table
+const maxS = Math.max(...groups.flatMap(g=>g.s));
+document.getElementById('tbody').innerHTML = groups.map(g=>{
+  const bars = g.s.map(v=>`<i style="height:${(v/maxS*26).toFixed(0)}px"></i>`).join('');
+  return `<tr>
+    <td><b>${g.rk}</b></td>
+    <td>${g.id}</td>
+    <td class="nm">${g.name} ${badge(g.rk)}</td>
+    <td>${g.s[0].toFixed(2)}</td><td>${g.s[1].toFixed(2)}</td><td>${g.s[2].toFixed(2)}</td>
+    <td><span class="spark">${bars}</span></td>
+    <td><b>${g.score.toFixed(2)}</b></td>
+  </tr>`;
+}).join('');
+</script>
+</body>
+</html>
